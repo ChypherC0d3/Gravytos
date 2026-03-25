@@ -6,6 +6,8 @@ import { usePrivacyStore } from '@gravytos/state';
 import { useERC20Approval } from '../hooks/useERC20Approval';
 import { useAccount } from 'wagmi';
 import { getTokenAddress } from '@gravytos/config';
+import { TokenPicker } from '../components/TokenPicker';
+import type { Token } from '../components/TokenPicker';
 
 // ─── Chain & Token Definitions ───────────────────────────────
 
@@ -104,6 +106,8 @@ export function Swap() {
   const [swapStep, setSwapStep] = useState<SwapStep | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [swapPhase, setSwapPhase] = useState<'quote' | 'approve' | 'swap' | 'done'>('quote');
+  const [showFromTokenPicker, setShowFromTokenPicker] = useState(false);
+  const [showToTokenPicker, setShowToTokenPicker] = useState(false);
 
   // Determine if the fromToken is native (no approval needed)
   const NATIVE_SYMBOLS = ['ETH', 'MATIC', 'SOL', 'BTC'];
@@ -118,7 +122,6 @@ export function Swap() {
   const fromTokenAddress = !isNativeFrom ? getTokenAddress(evmChainId, fromToken) : undefined;
   const { needsApproval, requestApproval, isApproving } = useERC20Approval(fromTokenAddress);
 
-  const tokens = TOKENS_BY_CHAIN[fromChain] ?? [];
   const effectiveSlippage = customSlippage ? Number(customSlippage) : slippage;
 
   function handleChainChange(newChain: string) {
@@ -286,15 +289,18 @@ export function Swap() {
                 <span className="text-xs font-light text-white/20">Balance: 0.0100 {fromToken}</span>
               </div>
               <div className="flex gap-3">
-                <select
-                  value={fromToken}
-                  onChange={(e) => { setFromToken(e.target.value); setQuotes([]); }}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white/80 focus:outline-none focus:border-purple-500/50 transition-all duration-300"
+                <button
+                  onClick={() => setShowFromTokenPicker(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300 min-w-[120px]"
                 >
-                  {tokens.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-[10px] font-semibold text-white/70">
+                    {fromToken.substring(0, 2)}
+                  </div>
+                  <span className="text-sm font-medium text-white/80">{fromToken}</span>
+                  <svg className="w-3 h-3 text-white/30 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
                 <div className="relative flex-1">
                   <input
                     type="number"
@@ -331,15 +337,18 @@ export function Swap() {
             <div className="glass-card p-6 space-y-3">
               <label className="text-xs font-light tracking-wider text-white/30 uppercase">To</label>
               <div className="flex gap-3">
-                <select
-                  value={toToken}
-                  onChange={(e) => { setToToken(e.target.value); setQuotes([]); }}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white/80 focus:outline-none focus:border-purple-500/50 transition-all duration-300"
+                <button
+                  onClick={() => setShowToTokenPicker(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300 min-w-[120px]"
                 >
-                  {tokens.filter((t) => t !== fromToken).map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-[10px] font-semibold text-white/70">
+                    {toToken.substring(0, 2)}
+                  </div>
+                  <span className="text-sm font-medium text-white/80">{toToken}</span>
+                  <svg className="w-3 h-3 text-white/30 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
                 <div className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-4 py-2.5 text-sm font-mono text-white/40">
                   {quotes.length > 0 ? quotes[selectedQuote].outputAmount : '0.00'}
                 </div>
@@ -522,6 +531,34 @@ export function Swap() {
           </div>
         )}
       </main>
+
+      {/* From Token Picker Modal */}
+      {showFromTokenPicker && (
+        <TokenPicker
+          chainId={fromChain}
+          selectedToken={fromToken}
+          onSelect={(t: Token) => {
+            setFromToken(t.symbol);
+            setQuotes([]);
+            setShowFromTokenPicker(false);
+          }}
+          onClose={() => setShowFromTokenPicker(false)}
+        />
+      )}
+
+      {/* To Token Picker Modal */}
+      {showToTokenPicker && (
+        <TokenPicker
+          chainId={fromChain}
+          selectedToken={toToken}
+          onSelect={(t: Token) => {
+            setToToken(t.symbol);
+            setQuotes([]);
+            setShowToTokenPicker(false);
+          }}
+          onClose={() => setShowToTokenPicker(false)}
+        />
+      )}
     </div>
   );
 }

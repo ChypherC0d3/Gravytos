@@ -4,6 +4,7 @@ import { PrivacyLevel } from '@gravytos/types';
 import { PrivacySlider } from '@gravytos/ui';
 import { useWalletStore, usePriceStore } from '@gravytos/state';
 import { ConnectWalletButton } from '../components/ConnectWalletButton';
+import { NotificationTray } from '../components/NotificationTray';
 import { CreateWalletModal } from '../components/CreateWalletModal';
 import { UnlockWalletModal } from '../components/UnlockWalletModal';
 import { useWalletManager } from '../hooks/useWalletManager';
@@ -149,6 +150,7 @@ export function Dashboard() {
             <span className="text-xs font-light tracking-wider text-white/30 px-3 py-1 rounded-full border border-white/10 bg-white/5">
               Testnet
             </span>
+            <NotificationTray />
             <ConnectWalletButton />
           </div>
         </div>

@@ -9,11 +9,15 @@ import { ERC20_TRANSFER_ABI } from '@gravytos/core';
 import { useSendTransaction, useWriteContract, useAccount } from 'wagmi';
 import { parseEther, parseUnits } from 'viem';
 import { ConnectWalletButton } from '../components/ConnectWalletButton';
+import { AddressBookPicker } from '../components/AddressBookPicker';
 import { TransactionConfirmModal } from '../components/TransactionConfirmModal';
 import type { TransactionConfirmDetails } from '../components/TransactionConfirmModal';
 import { TransactionStatusToast } from '../components/TransactionStatusToast';
 import type { ToastData } from '../components/TransactionStatusToast';
 import { useTransactionEngine } from '../hooks/useTransactionEngine';
+import { QRScanner } from '../components/QRScanner';
+import { TokenPicker } from '../components/TokenPicker';
+import type { Token } from '../components/TokenPicker';
 
 // ─── Chain & Token Definitions ───────────────────────────────
 
@@ -152,8 +156,11 @@ export function Send() {
 
   // Modal + toast state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showAddressBook, setShowAddressBook] = useState(false);
   const [toastData, setToastData] = useState<ToastData | null>(null);
   const [txError, setTxError] = useState<string | null>(null);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [showTokenPicker, setShowTokenPicker] = useState(false);
 
   const selectedChain = CHAINS.find((c) => c.id === chain)!;
 
@@ -170,7 +177,6 @@ export function Send() {
     const chainBalances = balances[chainKey];
     return chainBalances?.[token]?.formatted ?? '0.0000';
   }, [selectedChain, evmChainId, balances, token]);
-  const tokens = TOKENS_BY_CHAIN[chain] ?? [selectedChain.symbol];
   const isBitcoin = selectedChain.family === 'bitcoin';
   const showCoinControl = isBitcoin && privacyLevel === PrivacyLevel.High;
 
@@ -589,33 +595,51 @@ export function Send() {
             <div className="glass-card p-6 space-y-5">
               <div>
                 <label className="text-xs font-light tracking-wider text-white/30 mb-2 block uppercase">Token</label>
-                <div className="flex gap-2 flex-wrap">
-                  {tokens.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setToken(t)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-300 ${
-                        token === t
-                          ? 'bg-white/10 text-white border-white/20'
-                          : 'bg-white/5 text-white/40 border-white/5 hover:border-white/15'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  onClick={() => setShowTokenPicker(true)}
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300 w-full"
+                >
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-xs font-semibold text-white/70">
+                    {token.substring(0, 2)}
+                  </div>
+                  <span className="text-sm font-medium text-white/80 flex-1 text-left">{token}</span>
+                  <svg className="w-4 h-4 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
               </div>
 
               {/* Recipient */}
               <div>
                 <label className="text-xs font-light tracking-wider text-white/30 mb-2 block uppercase">Recipient Address</label>
-                <input
-                  type="text"
-                  value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
-                  placeholder={isBitcoin ? 'bc1q...' : selectedChain.family === 'solana' ? '7xK...' : '0x...'}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25 transition-all duration-300"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={recipient}
+                    onChange={(e) => setRecipient(e.target.value)}
+                    placeholder={isBitcoin ? 'bc1q...' : selectedChain.family === 'solana' ? '7xK...' : '0x...'}
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25 transition-all duration-300"
+                  />
+                  <button
+                    onClick={() => setShowQRScanner(true)}
+                    title="Address Book"
+                    className="px-3 py-3 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 text-white/40 hover:text-purple-400 transition-all duration-300"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setShowQRScanner(true)}
+                    title="Scan QR Code"
+                    className="px-3 py-3 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 text-white/40 hover:text-purple-400 transition-all duration-300"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625v2.625m3.375-2.625V21m3.375-7.875v3.375M17.25 14.625h3.375" />
+                    </svg>
+                  </button>
+                </div>
                 {recipient.length > 0 && !isValidRecipient && (
                   <p className="text-xs text-red-400 mt-1">Address too short</p>
                 )}
@@ -798,6 +822,42 @@ export function Send() {
         toast={toastData}
         onDismiss={() => setToastData(null)}
       />
+
+      {/* QR Scanner Modal */}
+      {showQRScanner && (
+        <QRScanner
+          onScan={(data) => {
+            setRecipient(data);
+            setShowQRScanner(false);
+          }}
+          onClose={() => setShowQRScanner(false)}
+        />
+      )}
+
+      {/* Token Picker Modal */}
+      {showTokenPicker && (
+        <TokenPicker
+          chainId={chain}
+          selectedToken={token}
+          onSelect={(t: Token) => {
+            setToken(t.symbol);
+            setShowTokenPicker(false);
+          }}
+          onClose={() => setShowTokenPicker(false)}
+        />
+      )}
+
+      {/* Address Book Picker Modal */}
+      {showAddressBook && (
+        <AddressBookPicker
+          chainFamily={selectedChain.family as 'bitcoin' | 'evm' | 'solana'}
+          onSelect={(address) => {
+            setRecipient(address);
+            setShowAddressBook(false);
+          }}
+          onClose={() => setShowAddressBook(false)}
+        />
+      )}
     </div>
   );
 }

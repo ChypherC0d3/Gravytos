@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { QRCode } from '../components/QRCode';
+import { QRScanner } from '../components/QRScanner';
 
 // ─── Chain Definitions ───────────────────────────────────────
 
@@ -29,36 +31,12 @@ const MOCK_ADDRESSES: Record<string, string[]> = {
   'optimism-10': ['0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38'],
 };
 
-// ─── QR Code Placeholder ─────────────────────────────────────
-
-function QRPlaceholder({ value }: { value: string }) {
-  const cells = 21;
-  const size = 200;
-  const cellSize = size / cells;
-
-  const rects: { x: number; y: number }[] = [];
-  for (let row = 0; row < cells; row++) {
-    for (let col = 0; col < cells; col++) {
-      const charCode = value.charCodeAt((row * cells + col) % value.length) || 0;
-      const show = (charCode + row + col) % 3 !== 0;
-      const isFinder =
-        (row < 7 && col < 7) ||
-        (row < 7 && col >= cells - 7) ||
-        (row >= cells - 7 && col < 7);
-      if (show || isFinder) {
-        rects.push({ x: col * cellSize, y: row * cellSize });
-      }
-    }
-  }
-
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-48 h-48 mx-auto" role="img" aria-label="QR code">
-      <rect width={size} height={size} fill="white" rx={8} />
-      {rects.map((r, i) => (
-        <rect key={i} x={r.x} y={r.y} width={cellSize} height={cellSize} fill="#18181b" />
-      ))}
-    </svg>
-  );
+// ─── Chain type helper for QR code URI formatting ───────────
+function getChainType(chainId: string): 'bitcoin' | 'ethereum' | 'solana' | undefined {
+  if (chainId === 'bitcoin-mainnet') return 'bitcoin';
+  if (chainId === 'solana-mainnet') return 'solana';
+  if (chainId.startsWith('ethereum') || chainId.startsWith('polygon') || chainId.startsWith('arbitrum') || chainId.startsWith('base') || chainId.startsWith('optimism')) return 'ethereum';
+  return undefined;
 }
 
 // ─── Navbar ──────────────────────────────────────────────────
@@ -102,6 +80,8 @@ export function Receive() {
   const [stealthScanning, setStealthScanning] = useState(false);
   const [stealthScanComplete, setStealthScanComplete] = useState(false);
   const [stealthPayments] = useState<Array<{ txHash: string; value: string; timestamp: number }>>([]);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannedAddress, setScannedAddress] = useState<string | null>(null);
 
   const selectedChain = CHAINS.find((c) => c.id === chain)!;
   const addresses = MOCK_ADDRESSES[chain] ?? [];
@@ -154,9 +134,7 @@ export function Receive() {
 
         {/* QR Code & Address */}
         <div className="glass-card p-10 text-center space-y-8 animate-pulse-glow">
-          <div className="inline-block p-5 bg-white rounded-2xl shadow-lg shadow-purple-500/10">
-            <QRPlaceholder value={currentAddress} />
-          </div>
+          <QRCode value={currentAddress} size={200} chain={getChainType(chain)} className="shadow-lg shadow-purple-500/10" />
 
           <div>
             <p className="text-xs font-light tracking-wider text-white/30 mb-3 uppercase">Your {selectedChain.name} Address</p>
@@ -190,6 +168,36 @@ export function Receive() {
               </>
             )}
           </button>
+
+          {/* Scan QR Button */}
+          <button
+            onClick={() => setShowScanner(true)}
+            className="btn-bevel-outline px-6 py-2.5"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625v2.625m3.375-2.625V21m3.375-7.875v3.375M17.25 14.625h3.375" />
+            </svg>
+            Scan QR Code
+          </button>
+
+          {/* Scanned Address Display */}
+          {scannedAddress && (
+            <div className="glass-card p-4 gradient-border">
+              <p className="text-xs font-light tracking-wider text-white/30 mb-2 uppercase">Scanned Address</p>
+              <p className="text-sm font-mono text-white/70 break-all leading-relaxed tracking-wide">{scannedAddress}</p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(scannedAddress).catch(() => {});
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="mt-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+              >
+                Copy to clipboard
+              </button>
+            </div>
+          )}
 
           {/* Generate New Address (BTC only) */}
           {isBitcoin && (
@@ -331,6 +339,17 @@ export function Receive() {
           </div>
         </div>
       </main>
+
+      {/* QR Scanner Modal */}
+      {showScanner && (
+        <QRScanner
+          onScan={(data) => {
+            setScannedAddress(data);
+            setShowScanner(false);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   );
 }

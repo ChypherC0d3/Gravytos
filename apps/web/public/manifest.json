@@ -1,0 +1,20 @@
+{
+  "name": "Gravytos",
+  "short_name": "Gravytos",
+  "description": "Multi-chain privacy wallet — Privacy by design, auditability on demand",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "utilities"],
+  "lang": "en"
+}

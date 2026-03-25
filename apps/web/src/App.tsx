@@ -5,6 +5,7 @@ import { useBtcBalance } from './hooks/useBtcBalance';
 import { useSolBalance } from './hooks/useSolBalance';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useWalletStore } from '@gravytos/state';
+import { MobileNav } from './components/MobileNav';
 
 // Error Boundary
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -56,7 +57,7 @@ export function App() {
   useAutoLock(disconnectAll);
 
   return (
-    <div className="min-h-screen bg-[hsl(220,30%,6%)] text-white">
+    <div className="min-h-screen bg-[hsl(220,30%,6%)] text-white pb-20 md:pb-0">
       <ErrorBoundary>
         <Suspense fallback={<Loading />}>
           <Routes>
@@ -71,6 +72,7 @@ export function App() {
           </Routes>
         </Suspense>
       </ErrorBoundary>
+      <MobileNav />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { ImportWalletModal } from '../components/ImportWalletModal';
 import { UnlockWalletModal } from '../components/UnlockWalletModal';
 import { useWalletManager } from '../hooks/useWalletManager';
 import type { WalletListEntry } from '../hooks/useWalletManager';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 // ─── Navbar ──────────────────────────────────────────────────
 
@@ -471,21 +472,27 @@ export function Settings() {
             {activeSection === 'display' && (
               <>
                 <Section title="Theme">
-                  <div className="flex gap-2">
-                    {(['dark', 'light', 'system'] as const).map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => settings.setTheme(t)}
-                        className={`px-4 py-2 rounded-lg text-sm font-light tracking-wide border transition-all duration-300 ${
-                          settings.theme === t
-                            ? 'bg-white/10 text-white border-white/20'
-                            : 'bg-white/5 text-white/40 border-white/5 hover:border-white/15'
-                        }`}
-                      >
-                        {t.charAt(0).toUpperCase() + t.slice(1)}
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-2">
+                      {(['dark', 'light', 'system'] as const).map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => settings.setTheme(t)}
+                          className={`px-4 py-2 rounded-lg text-sm font-light tracking-wide border transition-all duration-300 ${
+                            settings.theme === t
+                              ? 'bg-white/10 text-white border-white/20'
+                              : 'bg-white/5 text-white/40 border-white/5 hover:border-white/15'
+                          }`}
+                        >
+                          {t.charAt(0).toUpperCase() + t.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    <ThemeToggle />
                   </div>
+                  <p className="text-xs font-light text-white/30 tracking-wide mt-2">
+                    Current: {settings.theme.charAt(0).toUpperCase() + settings.theme.slice(1)}
+                  </p>
                 </Section>
 
                 <Section title="Language">

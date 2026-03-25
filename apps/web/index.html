@@ -6,6 +6,10 @@
     <title>Gravytos — Privacy-Enhanced Multi-Chain Wallet</title>
     <meta name="description" content="Multi-chain wallet with privacy by design and auditability on demand." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#7c3aed" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <script>
       // Node.js polyfills — MUST run before ANY module imports
       // Required by: @solana/spl-token, ed25519-hd-key, bitcoinjs-lib, readable-stream
@@ -17,5 +21,10 @@
   <body class="bg-zinc-950 text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+        navigator.serviceWorker.register('/sw.js');
+      }
+    </script>
   </body>
 </html>
