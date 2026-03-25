@@ -4,6 +4,8 @@ import { CoinJoinParticipant as CoinJoinParticipantClient } from '../participant
 import { CoinJoinRoundStatus } from '../types';
 import type { CoinJoinInput } from '../types';
 import type { UTXOInput } from '@gravytos/types';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 
 // ── Test Helpers ──────────────────────────────────────────────
 
@@ -25,6 +27,18 @@ function makePrivateKey(): Uint8Array {
   return key;
 }
 
+/** Generate a valid hex proof (at least 32 bytes = 64 hex chars). */
+function makeHexProof(seed?: string): string {
+  const data = new TextEncoder().encode(seed ?? `proof_${Math.random()}`);
+  return bytesToHex(sha256(data));
+}
+
+/** Generate a valid hex signature (at least 32 bytes = 64 hex chars). */
+function makeHexSig(seed?: string): string {
+  const data = new TextEncoder().encode(seed ?? `sig_${Math.random()}`);
+  return bytesToHex(sha256(data));
+}
+
 function registerFullParticipant(
   coordinator: CoinJoinCoordinator,
   roundId: string,
@@ -41,7 +55,7 @@ function registerFullParticipant(
       value: utxo.value,
       scriptPubKey: utxo.scriptPubKey,
     },
-    ownershipProof: 'valid_proof_' + participant.id,
+    ownershipProof: makeHexProof(participant.id),
   });
 
   const round = coordinator.getRound(roundId)!;
@@ -132,7 +146,7 @@ describe('CoinJoin Coordinator', () => {
         value: utxo.value,
         scriptPubKey: utxo.scriptPubKey,
       },
-      ownershipProof: 'valid_proof',
+      ownershipProof: makeHexProof('valid_proof'),
     });
 
     expect(result).toBe(true);
@@ -155,6 +169,19 @@ describe('CoinJoin Coordinator', () => {
     ).toThrow('Invalid ownership proof');
   });
 
+  it('should reject inputs with non-hex ownership proof', () => {
+    const round = coordinator.createRound({ denominationSats: 100000 });
+    const participant = coordinator.registerParticipant(round.id);
+
+    expect(() =>
+      coordinator.registerInput(round.id, {
+        participantId: participant.id,
+        utxo: { txid: 'abc', vout: 0, value: 200000, scriptPubKey: '00' },
+        ownershipProof: 'not_valid_hex_string_at_all!!',
+      }),
+    ).toThrow('Invalid ownership proof');
+  });
+
   it('should reject inputs with insufficient value', () => {
     const round = coordinator.createRound({ denominationSats: 100000 });
     const participant = coordinator.registerParticipant(round.id);
@@ -163,7 +190,7 @@ describe('CoinJoin Coordinator', () => {
       coordinator.registerInput(round.id, {
         participantId: participant.id,
         utxo: { txid: 'abc', vout: 0, value: 50000, scriptPubKey: '00' },
-        ownershipProof: 'proof',
+        ownershipProof: makeHexProof('proof'),
       }),
     ).toThrow('too small');
   });
@@ -176,7 +203,7 @@ describe('CoinJoin Coordinator', () => {
     const input: CoinJoinInput = {
       participantId: p1.id,
       utxo: { txid: 'dup_tx', vout: 0, value: 200000, scriptPubKey: '00' },
-      ownershipProof: 'proof1',
+      ownershipProof: makeHexProof('proof1'),
     };
     coordinator.registerInput(round.id, input);
 
@@ -184,7 +211,7 @@ describe('CoinJoin Coordinator', () => {
       coordinator.registerInput(round.id, {
         ...input,
         participantId: p2.id,
-        ownershipProof: 'proof2',
+        ownershipProof: makeHexProof('proof2'),
       }),
     ).toThrow('already registered');
   });
@@ -196,7 +223,7 @@ describe('CoinJoin Coordinator', () => {
       coordinator.registerInput(round.id, {
         participantId: 'unknown_id',
         utxo: { txid: 'abc', vout: 0, value: 200000, scriptPubKey: '00' },
-        ownershipProof: 'proof',
+        ownershipProof: makeHexProof('proof'),
       }),
     ).toThrow('not registered');
   });
@@ -239,8 +266,8 @@ describe('CoinJoin Coordinator', () => {
     expect(built.unsignedTransaction).toBeTruthy();
 
     // Sign all inputs
-    coordinator.addInputSignature(round.id, p1Id, p1Idx, 'sig_p1');
-    coordinator.addInputSignature(round.id, p2Id, p2Idx, 'sig_p2');
+    coordinator.addInputSignature(round.id, p1Id, p1Idx, makeHexSig('sig_p1'));
+    coordinator.addInputSignature(round.id, p2Id, p2Idx, makeHexSig('sig_p2'));
     expect(coordinator.isFullySigned(round.id)).toBe(true);
 
     // Phase 3 -> 4: TransactionSigning -> TransactionBroadcast
@@ -318,8 +345,11 @@ describe('CoinJoin Coordinator', () => {
 
     const built = coordinator.getRound(round.id)!;
     expect(built.unsignedTransaction).toBeTruthy();
-    // Verify it's valid hex
-    expect(built.unsignedTransaction).toMatch(/^[0-9a-f]+$/);
+    // unsignedTransaction is now JSON, verify it parses
+    const txData = JSON.parse(built.unsignedTransaction!);
+    expect(txData.version).toBe(2);
+    expect(txData.inputs).toHaveLength(2);
+    expect(txData.outputs.length).toBeGreaterThanOrEqual(2);
   });
 
   // ── Proof generation and verification ───────────────────────
@@ -345,8 +375,8 @@ describe('CoinJoin Coordinator', () => {
       });
     }
     coordinator.advanceRound(round.id);
-    coordinator.addInputSignature(round.id, p1Id, p1Idx, 'sig1');
-    coordinator.addInputSignature(round.id, p2Id, p2Idx, 'sig2');
+    coordinator.addInputSignature(round.id, p1Id, p1Idx, makeHexSig('sig1'));
+    coordinator.addInputSignature(round.id, p2Id, p2Idx, makeHexSig('sig2'));
     coordinator.advanceRound(round.id);
     coordinator.advanceRound(round.id); // -> Completed
 
@@ -387,8 +417,8 @@ describe('CoinJoin Coordinator', () => {
       });
     }
     coordinator.advanceRound(round.id);
-    coordinator.addInputSignature(round.id, p1Id, p1Idx, 'sig1');
-    coordinator.addInputSignature(round.id, p2Id, p2Idx, 'sig2');
+    coordinator.addInputSignature(round.id, p1Id, p1Idx, makeHexSig('sig1'));
+    coordinator.addInputSignature(round.id, p2Id, p2Idx, makeHexSig('sig2'));
     coordinator.advanceRound(round.id);
     coordinator.advanceRound(round.id);
 
@@ -488,19 +518,12 @@ describe('CoinJoin Coordinator', () => {
     }
 
     // Build transaction multiple times and check that order varies.
-    // Since the coordinator stores the transaction, we read the built PSBT.
     coordinator.advanceRound(round.id);
     const r = coordinator.getRound(round.id)!;
     expect(r.unsignedTransaction).toBeTruthy();
 
-    // Decode the PSBT to check it contains all inputs and outputs
-    const psbtBytes = new Uint8Array(
-      (r.unsignedTransaction!.match(/.{2}/g) ?? []).map((b) =>
-        parseInt(b, 16),
-      ),
-    );
-    const psbtJson = new TextDecoder().decode(psbtBytes);
-    const txData = JSON.parse(psbtJson);
+    // unsignedTransaction is now JSON -- parse it directly
+    const txData = JSON.parse(r.unsignedTransaction!);
 
     expect(txData.inputs).toHaveLength(5);
     expect(txData.outputs.length).toBeGreaterThanOrEqual(5); // 5 denomination + potential fee
@@ -531,15 +554,9 @@ describe('CoinJoin Coordinator', () => {
 
     coordinator.advanceRound(round.id);
 
-    // Decode transaction and verify fee output exists
+    // Decode transaction -- now stored as JSON
     const built = coordinator.getRound(round.id)!;
-    const psbtBytes = new Uint8Array(
-      (built.unsignedTransaction!.match(/.{2}/g) ?? []).map((b) =>
-        parseInt(b, 16),
-      ),
-    );
-    const psbtJson = new TextDecoder().decode(psbtBytes);
-    const txData = JSON.parse(psbtJson);
+    const txData = JSON.parse(built.unsignedTransaction!);
 
     // With 1% fee rate on each participant's input total, fee should be present
     const feeOutput = txData.outputs.find(
@@ -594,8 +611,8 @@ describe('CoinJoin Coordinator', () => {
       });
     }
     coordinator.advanceRound(round.id);
-    coordinator.addInputSignature(round.id, p1Id, p1Idx, 'sig1');
-    coordinator.addInputSignature(round.id, p2Id, p2Idx, 'sig2');
+    coordinator.addInputSignature(round.id, p1Id, p1Idx, makeHexSig('sig1'));
+    coordinator.addInputSignature(round.id, p2Id, p2Idx, makeHexSig('sig2'));
     coordinator.advanceRound(round.id);
     coordinator.advanceRound(round.id);
 
@@ -648,8 +665,35 @@ describe('CoinJoin Coordinator', () => {
 
     // p2 tries to sign p1's input
     expect(() =>
-      coordinator.addInputSignature(round.id, p2Id, p1Idx, 'bad_sig'),
+      coordinator.addInputSignature(round.id, p2Id, p1Idx, makeHexSig('bad_sig')),
     ).toThrow('does not belong');
+  });
+
+  it('should reject invalid signature format', () => {
+    const round = coordinator.createRound({
+      denominationSats: 100000,
+      minParticipants: 2,
+    });
+
+    const { participantId: p1Id, inputIndex: p1Idx } =
+      registerFullParticipant(coordinator, round.id, 100000);
+    registerFullParticipant(coordinator, round.id, 100000);
+
+    coordinator.advanceRound(round.id);
+    const r = coordinator.getRound(round.id)!;
+    for (const p of r.participants) {
+      coordinator.registerOutput(round.id, {
+        participantId: p.id,
+        address: `bc1q_out_${p.id}`,
+        value: 100000,
+      });
+    }
+    coordinator.advanceRound(round.id);
+
+    // Non-hex signature should be rejected
+    expect(() =>
+      coordinator.addInputSignature(round.id, p1Id, p1Idx, 'not_hex!!'),
+    ).toThrow('Invalid signature format');
   });
 
   it('should report not fully signed when signatures are missing', () => {
@@ -674,7 +718,7 @@ describe('CoinJoin Coordinator', () => {
     coordinator.advanceRound(round.id);
 
     // Only p1 signs
-    coordinator.addInputSignature(round.id, p1Id, p1Idx, 'sig1');
+    coordinator.addInputSignature(round.id, p1Id, p1Idx, makeHexSig('sig1'));
     expect(coordinator.isFullySigned(round.id)).toBe(false);
   });
 
@@ -699,7 +743,7 @@ describe('CoinJoin Coordinator', () => {
     }
     coordinator.advanceRound(round.id);
 
-    coordinator.addInputSignature(round.id, p1Id, p1Idx, 'sig1');
+    coordinator.addInputSignature(round.id, p1Id, p1Idx, makeHexSig('sig1'));
 
     expect(() => coordinator.advanceRound(round.id)).toThrow(
       'Not all inputs have been signed',
@@ -792,15 +836,17 @@ describe('CoinJoin Participant Client', () => {
     expect(r.outputRegistrations).toHaveLength(2);
   });
 
-  it('should generate ownership proofs', () => {
+  it('should generate ownership proofs with secp256k1', () => {
     const participant = new CoinJoinParticipantClient(coordinator);
     const utxo = makeUtxo();
     const key = makePrivateKey();
 
     const proof = participant.generateOwnershipProof('round_123', utxo, key);
-    expect(proof).toMatch(/^[0-9a-f]{64}$/);
+    // secp256k1 ECDSA signatures are 64-65 bytes = 128-130 hex chars
+    expect(proof).toMatch(/^[0-9a-f]+$/);
+    expect(proof.length).toBeGreaterThanOrEqual(128);
 
-    // Same inputs should give same proof
+    // Same inputs should give same proof (deterministic per RFC6979)
     const proof2 = participant.generateOwnershipProof('round_123', utxo, key);
     expect(proof2).toBe(proof);
 

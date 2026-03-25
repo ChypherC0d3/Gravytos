@@ -3,9 +3,18 @@
 // 4-step wizard: Name/Password -> Mnemonic -> Confirm -> Success
 // ===================================================================
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useWalletManager } from '../hooks/useWalletManager';
 import type { DerivedAddresses } from '../hooks/useWalletManager';
+
+const getRandomPositions = (totalWords: number, count: number): number[] => {
+  const positions: number[] = [];
+  while (positions.length < count) {
+    const pos = Math.floor(Math.random() * totalWords);
+    if (!positions.includes(pos)) positions.push(pos);
+  }
+  return positions.sort((a, b) => a - b);
+};
 
 interface CreateWalletModalProps {
   isOpen: boolean;
@@ -19,11 +28,12 @@ export function CreateWalletModal({ isOpen, onClose, onCreated }: CreateWalletMo
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [mnemonic, setMnemonic] = useState('');
-  const [confirmed, setConfirmed] = useState(false);
   const [addresses, setAddresses] = useState<DerivedAddresses | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [verifyPositions, setVerifyPositions] = useState<number[]>([]);
+  const [verifyInputs, setVerifyInputs] = useState<Record<number, string>>({});
 
   const { createWallet, deriveAddresses } = useWalletManager();
 
@@ -33,11 +43,12 @@ export function CreateWalletModal({ isOpen, onClose, onCreated }: CreateWalletMo
     setPassword('');
     setConfirmPassword('');
     setMnemonic('');
-    setConfirmed(false);
     setAddresses(null);
     setError('');
     setLoading(false);
     setCopied(false);
+    setVerifyPositions([]);
+    setVerifyInputs({});
   }, []);
 
   const handleClose = useCallback(() => {
@@ -83,15 +94,23 @@ export function CreateWalletModal({ isOpen, onClose, onCreated }: CreateWalletMo
     }
   }, [mnemonic]);
 
+  const verifyAllCorrect = useMemo(() => {
+    if (verifyPositions.length === 0 || !mnemonic) return false;
+    const mnemonicWords = mnemonic.split(' ');
+    return verifyPositions.every(
+      (pos) => verifyInputs[pos]?.trim().toLowerCase() === mnemonicWords[pos]?.toLowerCase()
+    );
+  }, [verifyPositions, verifyInputs, mnemonic]);
+
   const handleStep3 = useCallback(() => {
-    if (!confirmed) {
-      setError('Please confirm you have saved your recovery phrase');
+    if (!verifyAllCorrect) {
+      setError('Please enter the correct words to verify your backup');
       return;
     }
     setError('');
     setStep(4);
     onCreated();
-  }, [confirmed, onCreated]);
+  }, [verifyAllCorrect, onCreated]);
 
   if (!isOpen) return null;
 
@@ -232,39 +251,75 @@ export function CreateWalletModal({ isOpen, onClose, onCreated }: CreateWalletMo
               {copied ? 'Copied!' : 'Copy to Clipboard'}
             </button>
 
-            <button onClick={() => setStep(3)} className="w-full btn-bevel py-3 text-sm">
+            <button onClick={() => {
+              const wordCount = mnemonic.split(' ').length;
+              setVerifyPositions(getRandomPositions(wordCount, 3));
+              setVerifyInputs({});
+              setError('');
+              setStep(3);
+            }} className="w-full btn-bevel py-3 text-sm">
               I have written it down
             </button>
           </div>
         )}
 
-        {/* Step 3: Confirm */}
+        {/* Step 3: Verify Seed Phrase */}
         {step === 3 && (
           <div className="space-y-4">
             <p className="text-sm font-light text-white/60 tracking-wide leading-relaxed">
-              Please confirm that you have safely stored your recovery phrase. Without it, you will not be able to recover your wallet.
+              Verify your recovery phrase by entering the correct words below.
             </p>
 
-            <label className="flex items-start gap-3 p-4 rounded-lg glass-card cursor-pointer hover:border-purple-500/20 transition-all duration-300">
-              <input
-                type="checkbox"
-                checked={confirmed}
-                onChange={(e) => setConfirmed(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-white/20 bg-white/5 text-purple-500 focus:ring-purple-500/50 focus:ring-offset-0"
-              />
-              <span className="text-sm font-light text-white/70 tracking-wide leading-relaxed">
-                I have safely stored my recovery phrase and understand that losing it means losing access to my funds permanently.
-              </span>
-            </label>
+            <div className="space-y-3">
+              {verifyPositions.map((pos) => {
+                const mnemonicWords = mnemonic.split(' ');
+                const inputVal = verifyInputs[pos] ?? '';
+                const isCorrect = inputVal.trim().toLowerCase() === mnemonicWords[pos]?.toLowerCase();
+                const hasInput = inputVal.trim().length > 0;
+                return (
+                  <div key={pos} className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-white/40 w-16 text-right shrink-0">Word #{pos + 1}</span>
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={inputVal}
+                        onChange={(e) => setVerifyInputs((prev) => ({ ...prev, [pos]: e.target.value }))}
+                        placeholder={`Enter word #${pos + 1}`}
+                        className={`w-full glass-card px-4 py-3 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none transition-all duration-300 ${
+                          hasInput
+                            ? isCorrect
+                              ? 'border-emerald-500/50 bg-emerald-500/5'
+                              : 'border-red-500/50 bg-red-500/5'
+                            : 'border-white/10'
+                        }`}
+                      />
+                      {hasInput && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {isCorrect ? (
+                            <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
             {error && <p className="text-xs text-red-400 font-light">{error}</p>}
 
             <button
               onClick={handleStep3}
-              disabled={!confirmed}
+              disabled={!verifyAllCorrect}
               className="w-full btn-bevel py-3 text-sm disabled:opacity-40"
             >
-              Confirm &amp; Finish
+              Continue
             </button>
           </div>
         )}

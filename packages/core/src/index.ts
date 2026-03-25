@@ -32,6 +32,14 @@ export { BitcoinPrivacyEngine } from './privacy-engine/btc-privacy';
 export { EVMPrivacyEngine } from './privacy-engine/evm-privacy';
 export { SolanaPrivacyEngine } from './privacy-engine/sol-privacy';
 
+// ── Stealth Payments ──────────────────────────────────────────────
+export { StealthScanner } from './privacy-engine/stealth-scanner';
+export type {
+  StealthPayment,
+  ScanResult,
+  StealthAnnouncement,
+} from './privacy-engine/stealth-scanner';
+
 // ── CoinJoin ────────────────────────────────────────────────────
 export {
   CoinJoinCoordinator,

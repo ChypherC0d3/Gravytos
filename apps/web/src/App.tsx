@@ -3,6 +3,8 @@ import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { usePrices } from './hooks/usePrices';
 import { useBtcBalance } from './hooks/useBtcBalance';
 import { useSolBalance } from './hooks/useSolBalance';
+import { useAutoLock } from './hooks/useAutoLock';
+import { useWalletStore } from '@gravytos/state';
 
 // Error Boundary
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -49,6 +51,9 @@ export function App() {
   usePrices();
   useBtcBalance();
   useSolBalance();
+
+  const disconnectAll = useWalletStore((s) => s.disconnectAll);
+  useAutoLock(disconnectAll);
 
   return (
     <div className="min-h-screen bg-[hsl(220,30%,6%)] text-white">

@@ -432,22 +432,30 @@ export function Settings() {
             {activeSection === 'security' && (
               <>
                 <Section title="Auto-Lock">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-light tracking-wide text-white/70">Auto-lock timeout</p>
-                      <p className="text-xs font-light text-white/30 tracking-wide">Automatically lock wallet after inactivity.</p>
+                  <div>
+                    <p className="text-sm font-light tracking-wide text-white/70">Auto-lock timeout</p>
+                    <p className="text-xs font-light text-white/30 tracking-wide mb-3">Automatically lock wallets after inactivity. Currently set to: <span className="text-white/60">{settings.autoLockTimeout === 0 ? 'Never' : settings.autoLockTimeout < 60 ? `${settings.autoLockTimeout} minutes` : '1 hour'}</span></p>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        { value: 5, label: '5 min' },
+                        { value: 15, label: '15 min' },
+                        { value: 30, label: '30 min' },
+                        { value: 60, label: '1 hour' },
+                        { value: 0, label: 'Never' },
+                      ] as const).map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => settings.setAutoLockTimeout(opt.value)}
+                          className={`px-4 py-2 rounded-lg text-sm font-light tracking-wide border transition-all duration-300 ${
+                            settings.autoLockTimeout === opt.value
+                              ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 text-white border-purple-500/30 shadow-lg shadow-purple-500/10'
+                              : 'bg-white/5 text-white/40 border-white/5 hover:border-white/15 hover:text-white/60'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                     </div>
-                    <select
-                      value={settings.autoLockTimeout}
-                      onChange={(e) => settings.setAutoLockTimeout(Number(e.target.value))}
-                      className="bg-white/5 border border-white/10 rounded px-3 py-1.5 text-sm text-white/70 focus:outline-none focus:border-purple-500/50 transition-all duration-300"
-                    >
-                      <option value={0}>Disabled</option>
-                      <option value={5}>5 minutes</option>
-                      <option value={15}>15 minutes</option>
-                      <option value={30}>30 minutes</option>
-                      <option value={60}>1 hour</option>
-                    </select>
                   </div>
                 </Section>
 

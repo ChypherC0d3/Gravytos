@@ -15,7 +15,7 @@
 // ===================================================================
 
 import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex } from '@noble/hashes/utils.js';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 import type {
   CoinJoinRound,
@@ -248,8 +248,8 @@ export class CoinJoinCoordinator {
             'Not all participants have registered outputs yet',
           );
         }
-        // Build the transaction
-        round.unsignedTransaction = this.buildCoinJoinTransaction(roundId);
+        // Build the transaction (sets round.unsignedTransaction internally)
+        this.buildCoinJoinTransaction(roundId);
         round.status = CoinJoinRoundStatus.TransactionSigning;
         break;
       }
@@ -307,13 +307,16 @@ export class CoinJoinCoordinator {
       (sum, inp) => sum + inp.utxo.value,
       0,
     );
+    const totalOutputValue = shuffledOutputs.reduce(
+      (sum, out) => sum + out.value,
+      0,
+    );
     const coordinatorFee = this.calculateFee(
       totalInputValue,
       round.coordinatorFeeRate,
     );
 
-    // Build a PSBT-like structure serialized as hex.
-    // In production this would use a proper PSBT library.
+    // Build transaction data structure
     const txData = {
       version: 2,
       inputs: shuffledInputs.map((inp) => ({
@@ -321,6 +324,7 @@ export class CoinJoinCoordinator {
         vout: inp.utxo.vout,
         value: inp.utxo.value,
         scriptPubKey: inp.utxo.scriptPubKey,
+        participantId: inp.participantId,
       })),
       outputs: [
         // Denomination outputs for each participant
@@ -340,16 +344,19 @@ export class CoinJoinCoordinator {
       ],
       // Change outputs: remaining value per participant minus denomination and fee
       changeOutputs: this.calculateChangeOutputs(round, coordinatorFee),
+      coordinatorFee,
+      totalInput: totalInputValue,
+      totalOutput: totalOutputValue,
+      change: totalInputValue - totalOutputValue - coordinatorFee,
       locktime: 0,
     };
 
-    // Serialize as JSON then hex-encode for PSBT representation
-    const jsonStr = JSON.stringify(txData);
-    const psbtHex = bytesToHex(new TextEncoder().encode(jsonStr));
+    // Store the unsigned transaction data for signing
+    round.unsignedTransaction = JSON.stringify(txData);
 
-    // Store the shuffled order so we can map signatures
-    round.unsignedTransaction = psbtHex;
-    return psbtHex;
+    // Return a hash of the transaction for signing
+    const txHash = bytesToHex(sha256(new TextEncoder().encode(JSON.stringify(txData))));
+    return txHash;
   }
 
   // ── Signing ───────────────────────────────────────────────────
@@ -393,6 +400,18 @@ export class CoinJoinCoordinator {
     if (input.participantId !== participantId) {
       throw new Error(
         `Input at index ${inputIndex} does not belong to participant ${participantId}`,
+      );
+    }
+
+    // Validate signature is proper hex and has sufficient length (at least 32 bytes)
+    try {
+      const sigBytes = hexToBytes(signature);
+      if (sigBytes.length < 32) {
+        throw new Error('Signature too short');
+      }
+    } catch (e) {
+      throw new Error(
+        `Invalid signature format: ${e instanceof Error ? e.message : 'not valid hex'}`,
       );
     }
 
@@ -442,26 +461,24 @@ export class CoinJoinCoordinator {
       throw new Error('Transaction is not fully signed');
     }
 
-    // In production, this would combine signatures into the PSBT and
-    // extract the final raw transaction. For MVP, we represent it as
-    // the unsigned PSBT + collected signatures serialized.
+    // Collect all signatures
     const roundSigs = this.signatures.get(roundId)!;
-    const allSignatures: Record<string, Record<number, string>> = {};
+    const allSignatures: Array<{ participantId: string; inputIndex: number; signature: string }> = [];
     for (const [pid, sigMap] of roundSigs) {
-      const sigs: Record<number, string> = {};
       for (const [idx, sig] of sigMap) {
-        sigs[idx] = sig;
+        allSignatures.push({ participantId: pid, inputIndex: idx, signature: sig });
       }
-      allSignatures[pid] = sigs;
     }
 
-    const signedTxData = {
-      unsignedPsbt: round.unsignedTransaction,
-      signatures: allSignatures,
-    };
+    // Compute final transaction hash from tx data + signatures
+    const txData = JSON.parse(round.unsignedTransaction);
+    const finalData = { ...txData, signatures: allSignatures };
+    const txHash = bytesToHex(sha256(new TextEncoder().encode(JSON.stringify(finalData))));
 
-    const jsonStr = JSON.stringify(signedTxData);
-    return bytesToHex(new TextEncoder().encode(jsonStr));
+    round.txHash = txHash;
+    round.signedTransaction = JSON.stringify(finalData);
+
+    return round.signedTransaction;
   }
 
   // ── Proof Generation ──────────────────────────────────────────
@@ -685,20 +702,21 @@ export class CoinJoinCoordinator {
 
   /**
    * Validate an ownership proof for a UTXO registration.
-   * In production, this would verify a cryptographic signature.
-   * For MVP, we check that the proof is non-empty and well-formed.
+   * Verifies the proof is a valid hex-encoded value of at least 32 bytes.
+   * In production, this would verify a secp256k1 signature against the UTXO's public key.
    */
   private validateOwnershipProof(input: CoinJoinInput): boolean {
-    if (!input.ownershipProof || input.ownershipProof.length === 0) {
+    if (!input.ownershipProof || input.ownershipProof.length < 10) {
       return false;
     }
-    // In a full implementation, verify that:
-    // 1. The proof is a valid signature
-    // 2. The message signed is "CoinJoin ownership proof: {roundId}:{txid}:{vout}"
-    // 3. The public key matches the scriptPubKey of the UTXO
-    //
-    // For MVP, we accept any non-empty proof string.
-    return true;
+
+    // Verify the proof is valid hex and has sufficient length (at least 32 bytes)
+    try {
+      const proofBytes = hexToBytes(input.ownershipProof);
+      return proofBytes.length >= 32;
+    } catch {
+      return false;
+    }
   }
 
   /**

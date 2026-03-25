@@ -99,6 +99,9 @@ export function Receive() {
   const [chain, setChain] = useState('bitcoin-mainnet');
   const [addressIndex, setAddressIndex] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [stealthScanning, setStealthScanning] = useState(false);
+  const [stealthScanComplete, setStealthScanComplete] = useState(false);
+  const [stealthPayments] = useState<Array<{ txHash: string; value: string; timestamp: number }>>([]);
 
   const selectedChain = CHAINS.find((c) => c.id === chain)!;
   const addresses = MOCK_ADDRESSES[chain] ?? [];
@@ -255,6 +258,78 @@ export function Receive() {
             </div>
           </div>
         )}
+        {/* Stealth Payments Section */}
+        <div className="mt-8">
+          <h3 className="text-sm font-light tracking-wider text-white/40 mb-3 uppercase">Stealth Payments</h3>
+          <div className="glass-card p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-purple-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+              </svg>
+              <div>
+                <p className="text-sm font-light text-white/70 tracking-wide">Receive payments without revealing your address on-chain.</p>
+                <p className="text-xs font-light text-white/30 mt-1 tracking-wide">
+                  Stealth addresses use one-time keys so each payment goes to a unique address
+                  that only you can detect using your viewing key.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setStealthScanning(true);
+                setStealthScanComplete(false);
+                // Simulate scanning delay
+                setTimeout(() => {
+                  setStealthScanning(false);
+                  setStealthScanComplete(true);
+                }, 2000);
+              }}
+              disabled={stealthScanning}
+              className="btn-bevel-outline py-2 px-5 text-xs w-full disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {stealthScanning ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx={12} cy={12} r={10} stroke="currentColor" strokeWidth={4} />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Scanning for Stealth Payments...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                  </svg>
+                  Scan for Stealth Payments
+                </span>
+              )}
+            </button>
+
+            {stealthScanComplete && stealthPayments.length === 0 && (
+              <div className="text-center py-4">
+                <p className="text-xs font-light text-white/30 tracking-wide">No stealth payments found.</p>
+                <p className="text-xs font-light text-white/20 mt-1 tracking-wide">
+                  Share your stealth meta-address with senders. When they send funds, the scanner
+                  will detect payments using your viewing key.
+                </p>
+              </div>
+            )}
+
+            {stealthPayments.length > 0 && (
+              <div className="space-y-2">
+                {stealthPayments.map((payment, i) => (
+                  <div key={i} className="glass-card p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs font-mono text-white/40 truncate">{payment.txHash}</span>
+                    </div>
+                    <span className="text-xs font-light text-emerald-400 shrink-0 ml-2">{payment.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );

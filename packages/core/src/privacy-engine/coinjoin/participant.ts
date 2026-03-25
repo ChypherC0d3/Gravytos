@@ -10,7 +10,14 @@
 // ===================================================================
 
 import { sha256 } from '@noble/hashes/sha2.js';
+import { hmac } from '@noble/hashes/hmac.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
+import { sign, hashes as secp256k1Hashes } from '@noble/secp256k1';
+
+// Configure @noble/secp256k1 to use @noble/hashes for synchronous operations
+secp256k1Hashes.sha256 = (msg: Uint8Array) => sha256(msg);
+secp256k1Hashes.hmacSha256 = (key: Uint8Array, msg: Uint8Array) =>
+  hmac(sha256, key, msg);
 
 import type { UTXOInput } from '@gravytos/types';
 
@@ -166,29 +173,19 @@ export class CoinJoinParticipant {
 
   /**
    * Generate ownership proof for a UTXO.
-   * Signs a message: "CoinJoin ownership proof: {roundId}:{txid}:{vout}"
-   *
-   * In production, this would use secp256k1 signature.
-   * For MVP, we use HMAC-SHA256 with the private key as a demonstration.
+   * Signs the message "CoinJoin:{roundId}:{txid}:{vout}" using secp256k1 ECDSA.
    */
   generateOwnershipProof(
     roundId: string,
     utxo: UTXOInput,
     privateKey: Uint8Array,
   ): string {
-    const message = `CoinJoin ownership proof: ${roundId}:${utxo.txid}:${utxo.vout}`;
-    const messageBytes = new TextEncoder().encode(message);
+    const message = `CoinJoin:${roundId}:${utxo.txid}:${utxo.vout}`;
+    const msgHash = sha256(new TextEncoder().encode(message));
 
-    // Create a proof by hashing the message with the private key.
-    // In production this would be a proper secp256k1 ECDSA or Schnorr signature.
-    const combined = new Uint8Array(
-      messageBytes.length + privateKey.length,
-    );
-    combined.set(messageBytes);
-    combined.set(privateKey, messageBytes.length);
-
-    const proof = sha256(combined);
-    return bytesToHex(proof);
+    // Use secp256k1 ECDSA to sign the message hash
+    const sig = sign(msgHash, privateKey);
+    return bytesToHex(sig);
   }
 
   // ── Signing ───────────────────────────────────────────────────
@@ -231,16 +228,11 @@ export class CoinJoinParticipant {
         throw new Error(`No private key for input ${utxoKey}`);
       }
 
-      // Generate signature (in production: sign the PSBT sighash)
-      const sigMessage = new TextEncoder().encode(
-        `sign:${this.roundId}:${input.utxo.txid}:${input.utxo.vout}:${i}`,
-      );
-      const combined = new Uint8Array(
-        sigMessage.length + privateKey.length,
-      );
-      combined.set(sigMessage);
-      combined.set(privateKey, sigMessage.length);
-      const signature = bytesToHex(sha256(combined));
+      // Generate secp256k1 ECDSA signature of the PSBT sighash
+      const sigMessage = `sign:${this.roundId}:${input.utxo.txid}:${input.utxo.vout}:${i}`;
+      const msgHash = sha256(new TextEncoder().encode(sigMessage));
+      const sigBytes = sign(msgHash, privateKey);
+      const signature = bytesToHex(sigBytes);
 
       this.coordinator.addInputSignature(
         this.roundId,
