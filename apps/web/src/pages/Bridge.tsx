@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { PrivacyLevel } from '@gravytos/types';
 import { PrivacySlider } from '@gravytos/ui';
 import { usePrivacyStore } from '@gravytos/state';
+import { useERC20Approval } from '../hooks/useERC20Approval';
+import { useAccount } from 'wagmi';
+import { getTokenAddress } from '@gravytos/config';
 
 // ─── Chain & Token Definitions ───────────────────────────────
 
@@ -78,6 +81,7 @@ function Navbar() {
 
 export function Bridge() {
   const { globalLevel } = usePrivacyStore();
+  const { address: _walletAddress } = useAccount();
 
   const [sourceChain, setSourceChain] = useState('ethereum-1');
   const [destChain, setDestChain] = useState('arbitrum-42161');
@@ -91,6 +95,21 @@ export function Bridge() {
   const [bridging, setBridging] = useState(false);
   const [bridgeStep, setBridgeStep] = useState<BridgeStep | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [bridgePhase, setBridgePhase] = useState<'quote' | 'approve' | 'bridge' | 'tracking'>('quote');
+  const [trackingProgress, setTrackingProgress] = useState(0);
+
+  // Determine if the token is native (no approval needed for bridging)
+  const NATIVE_SYMBOLS = ['ETH', 'MATIC', 'SOL', 'BTC'];
+  const isNativeToken = NATIVE_SYMBOLS.includes(token);
+
+  // ERC20 approval hook for non-native tokens
+  const evmChainId = sourceChain.includes('ethereum') ? 1
+    : sourceChain.includes('polygon') ? 137
+    : sourceChain.includes('arbitrum') ? 42161
+    : sourceChain.includes('base') ? 8453
+    : sourceChain.includes('optimism') ? 10 : 1;
+  const tokenAddress = !isNativeToken ? getTokenAddress(evmChainId, token) : undefined;
+  const { needsApproval, requestApproval, isApproving } = useERC20Approval(tokenAddress);
 
   const sourceChainInfo = CHAINS.find((c) => c.id === sourceChain)!;
   const destChainInfo = CHAINS.find((c) => c.id === destChain)!;
@@ -127,21 +146,59 @@ export function Bridge() {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 1200 + Math.random() * 600));
     setHasQuote(true);
+    setBridgePhase('quote');
     setLoading(false);
+  }
+
+  function handleApprove() {
+    if (isNativeToken) {
+      setBridgePhase('bridge');
+      return;
+    }
+    const decimals = ['USDC', 'USDT'].includes(token) ? 6 : 18;
+    if (needsApproval(amount, decimals)) {
+      setBridgePhase('approve');
+      requestApproval();
+    } else {
+      setBridgePhase('bridge');
+    }
   }
 
   async function handleBridge() {
     if (!hasQuote) return;
+
+    // If non-native and not yet approved, trigger approval first
+    if (!isNativeToken && bridgePhase === 'quote') {
+      handleApprove();
+      return;
+    }
+
     setBridging(true);
-    const steps: BridgeStep[] = ['approving', 'sending', 'bridging', 'confirming'];
+    const steps: BridgeStep[] = isNativeToken
+      ? ['sending', 'bridging', 'confirming']
+      : ['approving', 'sending', 'bridging', 'confirming'];
     for (const step of steps) {
       setBridgeStep(step);
       const delay = step === 'bridging' ? 1500 : 800;
       await new Promise((r) => setTimeout(r, delay + Math.random() * 500));
     }
     setBridgeStep('done');
-    setTxHash('0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
+    const hash = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    setTxHash(hash);
     setBridging(false);
+
+    // Start tracking progress simulation
+    setBridgePhase('tracking');
+    setTrackingProgress(0);
+    const interval = setInterval(() => {
+      setTrackingProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return prev + 5;
+      });
+    }, 800);
   }
 
   function resetForm() {
@@ -150,6 +207,8 @@ export function Bridge() {
     setTxHash(null);
     setBridgeStep(null);
     setBridging(false);
+    setBridgePhase('quote');
+    setTrackingProgress(0);
   }
 
   return (
@@ -172,6 +231,33 @@ export function Bridge() {
               Bridging {amount} {token} from {sourceChainInfo.name} to {destChainInfo.name}
             </p>
             <div className="section-badge mx-auto">{estimatedTime} estimated</div>
+
+            {/* Tracking Progress */}
+            {bridgePhase === 'tracking' && trackingProgress < 100 && (
+              <div className="glass-card p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-light text-white/40">Bridge progress</span>
+                  <span className="font-mono text-purple-400">{trackingProgress}%</span>
+                </div>
+                <div className="w-full bg-white/5 rounded-full h-1.5">
+                  <div
+                    className="h-1.5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-700"
+                    style={{ width: `${trackingProgress}%` }}
+                  />
+                </div>
+                <p className="text-[10px] font-light text-white/25">Waiting for destination chain confirmation...</p>
+              </div>
+            )}
+
+            {trackingProgress >= 100 && (
+              <div className="text-xs font-light text-emerald-400 flex items-center justify-center gap-1">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+                Confirmed on destination chain
+              </div>
+            )}
+
             <div className="glass-card p-4">
               <p className="text-xs font-light text-white/30 mb-1">Transaction Hash</p>
               <p className="text-sm font-mono text-white/60 break-all">{txHash}</p>
@@ -417,13 +503,29 @@ export function Bridge() {
                 ) : 'Get Bridge Quote'}
               </button>
             ) : (
-              <button
-                onClick={handleBridge}
-                disabled={bridging}
-                className="btn-bevel w-full py-3.5 disabled:opacity-60"
-              >
-                {bridging ? 'Bridging...' : `Bridge ${amount} ${token}`}
-              </button>
+              <div className="space-y-3">
+                {/* Approval Button (for non-native tokens) */}
+                {!isNativeToken && bridgePhase === 'quote' && (
+                  <button
+                    onClick={handleApprove}
+                    disabled={isApproving}
+                    className="btn-bevel w-full py-3.5 disabled:opacity-60"
+                  >
+                    {isApproving ? `Approving ${token}...` : `Approve ${token}`}
+                  </button>
+                )}
+
+                {/* Bridge Button */}
+                {(isNativeToken || bridgePhase === 'bridge') && (
+                  <button
+                    onClick={handleBridge}
+                    disabled={bridging}
+                    className="btn-bevel w-full py-3.5 disabled:opacity-60"
+                  >
+                    {bridging ? 'Bridging...' : `Bridge ${amount} ${token}`}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}

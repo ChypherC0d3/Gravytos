@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTransactionEngine } from '../hooks/useTransactionEngine';
+import { useTransactionHistory } from '../hooks/useTransactionHistory';
+import type { HistoricalTransaction } from '@gravytos/core';
 import type { AuditVerificationResult } from '@gravytos/types';
 
 // ─── Types ───────────────────────────────────────────────────
@@ -24,33 +26,20 @@ interface HistoryTx {
   txHash: string;
   from?: string;
   to?: string;
+  explorerUrl?: string;
   swapTo?: { amount: string; token: string };
 }
-
-// ─── Mock Transaction Data ───────────────────────────────────
-
-const MOCK_HISTORY: HistoryTx[] = [
-  { id: '1', type: 'send', chain: 'ethereum', chainIcon: 'E', chainColor: 'text-blue-400', chainBorderColor: 'border-l-blue-500', amount: '0.5', token: 'ETH', status: 'confirmed', timestamp: Date.now() - 1800000, txHash: '0xabc1...def4', to: '0x742d...bD38' },
-  { id: '2', type: 'receive', chain: 'bitcoin', chainIcon: 'B', chainColor: 'text-orange-400', chainBorderColor: 'border-l-orange-500', amount: '0.012', token: 'BTC', status: 'confirmed', timestamp: Date.now() - 3600000, txHash: 'a1b2c3...f5e6', from: 'bc1q...x7k2' },
-  { id: '3', type: 'swap', chain: 'ethereum', chainIcon: 'E', chainColor: 'text-blue-400', chainBorderColor: 'border-l-blue-500', amount: '1.0', token: 'ETH', status: 'confirmed', timestamp: Date.now() - 7200000, txHash: '0xdef5...abc8', swapTo: { amount: '2415.50', token: 'USDC' } },
-  { id: '4', type: 'bridge', chain: 'arbitrum', chainIcon: 'A', chainColor: 'text-sky-400', chainBorderColor: 'border-l-sky-500', amount: '500', token: 'USDC', status: 'pending', timestamp: Date.now() - 10800000, txHash: '0x123a...789f' },
-  { id: '5', type: 'send', chain: 'solana', chainIcon: 'S', chainColor: 'text-purple-400', chainBorderColor: 'border-l-purple-500', amount: '25', token: 'SOL', status: 'confirmed', timestamp: Date.now() - 86400000, txHash: '7xKX...AsU', to: '9aB3...mPQ' },
-  { id: '6', type: 'receive', chain: 'ethereum', chainIcon: 'E', chainColor: 'text-blue-400', chainBorderColor: 'border-l-blue-500', amount: '1000', token: 'USDC', status: 'confirmed', timestamp: Date.now() - 86400000 * 2, txHash: '0x456b...cde9', from: '0x1234...5678' },
-  { id: '7', type: 'send', chain: 'polygon', chainIcon: 'P', chainColor: 'text-violet-400', chainBorderColor: 'border-l-violet-500', amount: '100', token: 'MATIC', status: 'failed', timestamp: Date.now() - 86400000 * 2, txHash: '0x789c...012f', to: '0xabcd...ef01' },
-  { id: '8', type: 'swap', chain: 'solana', chainIcon: 'S', chainColor: 'text-purple-400', chainBorderColor: 'border-l-purple-500', amount: '10', token: 'SOL', status: 'confirmed', timestamp: Date.now() - 86400000 * 3, txHash: '3bCd...xYz', swapTo: { amount: '1540.25', token: 'USDC' } },
-  { id: '9', type: 'bridge', chain: 'ethereum', chainIcon: 'E', chainColor: 'text-blue-400', chainBorderColor: 'border-l-blue-500', amount: '0.25', token: 'ETH', status: 'confirmed', timestamp: Date.now() - 86400000 * 5, txHash: '0xfed9...876a' },
-  { id: '10', type: 'receive', chain: 'bitcoin', chainIcon: 'B', chainColor: 'text-orange-400', chainBorderColor: 'border-l-orange-500', amount: '0.005', token: 'BTC', status: 'confirmed', timestamp: Date.now() - 86400000 * 7, txHash: 'e5f6a7...d4c3', from: 'bc1q...r7s8' },
-];
 
 // ─── Helpers ─────────────────────────────────────────────────
 
 function formatDate(ts: number): string {
-  const d = new Date(ts);
   const now = new Date();
-  const diffDays = Math.floor((now.getTime() - ts) / 86400000);
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
+  const d = new Date(ts);
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterdayStart = todayStart - 86400000;
+
+  if (ts >= todayStart) return 'Today';
+  if (ts >= yesterdayStart) return 'Yesterday';
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
@@ -98,6 +87,68 @@ function statusBadge(status: TxStatus) {
   }
 }
 
+function shortenHash(hash: string): string {
+  if (hash.length <= 12) return hash;
+  return `${hash.slice(0, 6)}...${hash.slice(-4)}`;
+}
+
+/** Map a chainId string from the history service to a chain filter key and display info */
+function resolveChainInfo(chainId: string, _chainSymbol: string): {
+  chain: ChainFilter;
+  chainIcon: string;
+  chainColor: string;
+  chainBorderColor: string;
+} {
+  if (chainId.startsWith('bitcoin')) {
+    return { chain: 'bitcoin', chainIcon: 'B', chainColor: 'text-orange-400', chainBorderColor: 'border-l-orange-500' };
+  }
+  if (chainId.startsWith('solana')) {
+    return { chain: 'solana', chainIcon: 'S', chainColor: 'text-purple-400', chainBorderColor: 'border-l-purple-500' };
+  }
+  if (chainId === 'ethereum-137') {
+    return { chain: 'polygon', chainIcon: 'P', chainColor: 'text-violet-400', chainBorderColor: 'border-l-violet-500' };
+  }
+  if (chainId === 'ethereum-42161') {
+    return { chain: 'arbitrum', chainIcon: 'A', chainColor: 'text-sky-400', chainBorderColor: 'border-l-sky-500' };
+  }
+  // Default to ethereum for chains 1, 10, 8453, etc.
+  return { chain: 'ethereum', chainIcon: 'E', chainColor: 'text-blue-400', chainBorderColor: 'border-l-blue-500' };
+}
+
+/** Map HistoricalTransaction type to the UI TxType */
+function mapTxType(type: HistoricalTransaction['type']): TxType {
+  switch (type) {
+    case 'sent': return 'send';
+    case 'received': return 'receive';
+    case 'swap': return 'swap';
+    case 'bridge': return 'bridge';
+    default: return 'send';
+  }
+}
+
+/** Convert real HistoricalTransaction[] to the internal HistoryTx[] format */
+function mapTransactions(txs: HistoricalTransaction[]): HistoryTx[] {
+  return txs.map((tx) => {
+    const chainInfo = resolveChainInfo(tx.chainId, tx.chainSymbol);
+    return {
+      id: tx.txHash,
+      type: mapTxType(tx.type),
+      chain: chainInfo.chain,
+      chainIcon: chainInfo.chainIcon,
+      chainColor: chainInfo.chainColor,
+      chainBorderColor: chainInfo.chainBorderColor,
+      amount: tx.value,
+      token: tx.tokenSymbol,
+      status: tx.status as TxStatus,
+      timestamp: tx.timestamp,
+      txHash: shortenHash(tx.txHash),
+      from: tx.from,
+      to: tx.to,
+      explorerUrl: tx.explorerUrl,
+    };
+  });
+}
+
 // ─── Navbar ──────────────────────────────────────────────────
 
 function Navbar() {
@@ -130,10 +181,25 @@ function Navbar() {
   );
 }
 
+// ─── Loading Spinner ─────────────────────────────────────────
+
+function LoadingSpinner() {
+  return (
+    <div className="glass-card p-16 flex flex-col items-center justify-center gap-4">
+      <svg className="w-8 h-8 animate-spin text-purple-400" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+        <path d="M4 12a8 8 0 0 1 8-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" />
+      </svg>
+      <p className="font-light text-white/30 tracking-wide">Loading transaction history...</p>
+    </div>
+  );
+}
+
 // ─── History Page ────────────────────────────────────────────
 
 export function History() {
   const { getAuditEngine } = useTransactionEngine();
+  const { transactions, isLoading, refetch } = useTransactionHistory();
 
   const [chainFilter, setChainFilter] = useState<ChainFilter>('all');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -142,6 +208,9 @@ export function History() {
   const [integrityResult, setIntegrityResult] = useState<AuditVerificationResult | null>(null);
   const [auditEventCount, setAuditEventCount] = useState(0);
   const [lastEventTime, setLastEventTime] = useState<number | null>(null);
+
+  // Map real blockchain transactions to UI format
+  const historyTxs = useMemo(() => mapTransactions(transactions), [transactions]);
 
   // Fetch audit event count on mount and periodically
   useEffect(() => {
@@ -165,21 +234,21 @@ export function History() {
   }, [getAuditEngine]);
 
   const filteredTxs = useMemo(() => {
-    return MOCK_HISTORY.filter((tx) => {
+    return historyTxs.filter((tx) => {
       if (chainFilter !== 'all' && tx.chain !== chainFilter) return false;
       if (typeFilter !== 'all' && tx.type !== typeFilter) return false;
       return true;
     });
-  }, [chainFilter, typeFilter]);
+  }, [historyTxs, chainFilter, typeFilter]);
 
   const grouped = useMemo(() => groupByDate(filteredTxs), [filteredTxs]);
 
-  // Total events: audit engine events + mock history
-  const totalEvents = auditEventCount + MOCK_HISTORY.length;
+  // Total events: audit engine events + fetched history
+  const totalEvents = auditEventCount + historyTxs.length;
 
   // Format last event time
   const lastEventLabel = useMemo(() => {
-    const ts = lastEventTime ?? (MOCK_HISTORY.length > 0 ? MOCK_HISTORY[0].timestamp : null);
+    const ts = lastEventTime ?? (historyTxs.length > 0 ? historyTxs[0].timestamp : null);
     if (!ts) return 'Never';
     const diffMs = Date.now() - ts;
     const diffMin = Math.floor(diffMs / 60000);
@@ -188,7 +257,7 @@ export function History() {
     const diffHours = Math.floor(diffMin / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${Math.floor(diffHours / 24)}d ago`;
-  }, [lastEventTime]);
+  }, [lastEventTime, historyTxs]);
 
   async function handleExportAudit() {
     setExportingAudit(true);
@@ -205,14 +274,14 @@ export function History() {
         a.click();
         URL.revokeObjectURL(url);
       } else {
-        // Fallback to mock data if engine not initialized
+        // Fallback: export fetched transaction history
         const auditData = {
           version: '1.0.0',
           exportedAt: Date.now(),
           application: 'nexora-vault',
-          totalEvents: MOCK_HISTORY.length,
+          totalEvents: transactions.length,
           integrityVerified: true,
-          events: MOCK_HISTORY,
+          events: transactions,
         };
         const blob = new Blob([JSON.stringify(auditData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -228,9 +297,9 @@ export function History() {
         version: '1.0.0',
         exportedAt: Date.now(),
         application: 'nexora-vault',
-        totalEvents: MOCK_HISTORY.length,
+        totalEvents: transactions.length,
         integrityVerified: true,
-        events: MOCK_HISTORY,
+        events: transactions,
       };
       const blob = new Blob([JSON.stringify(auditData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -270,6 +339,7 @@ export function History() {
   }
 
   const isIntegrityValid = integrityResult?.valid ?? null;
+  const hasNoWallet = !isLoading && transactions.length === 0;
 
   return (
     <div className="min-h-screen dark">
@@ -278,7 +348,16 @@ export function History() {
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-light tracking-wide text-white/90">Transaction History</h1>
-          <span className="text-xs font-light text-white/30 tracking-wide">{totalEvents} transactions</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={refetch}
+              disabled={isLoading}
+              className="text-xs font-light text-white/30 hover:text-white/60 tracking-wide transition-colors disabled:opacity-40"
+            >
+              {isLoading ? 'Refreshing...' : 'Refresh'}
+            </button>
+            <span className="text-xs font-light text-white/30 tracking-wide">{totalEvents} transactions</span>
+          </div>
         </div>
 
         {/* Filters */}
@@ -326,12 +405,32 @@ export function History() {
 
         {/* Transaction List */}
         <div className="space-y-6 mb-8">
+          {isLoading && transactions.length === 0 && <LoadingSpinner />}
+
+          {hasNoWallet && (
+            <div className="glass-card p-16 text-center">
+              <p className="font-light text-white/30 tracking-wide">Connect a wallet to see transaction history</p>
+            </div>
+          )}
+
+          {!isLoading && transactions.length > 0 && Array.from(grouped.entries()).length === 0 && (
+            <div className="glass-card p-16 text-center">
+              <p className="font-light text-white/30 tracking-wide">No transactions found</p>
+            </div>
+          )}
+
           {Array.from(grouped.entries()).map(([dateLabel, txs]) => (
             <div key={dateLabel}>
               <h3 className="text-xs font-light tracking-wider text-white/30 mb-2 px-1 uppercase">{dateLabel}</h3>
               <div className="space-y-2">
                 {txs.map((tx) => (
-                  <div key={tx.id} className={`glass-card p-5 flex items-center justify-between border-l-2 ${tx.chainBorderColor} hover:border-primary/30 transition-all duration-300 hover:shadow-lg`}>
+                  <a
+                    key={tx.id}
+                    href={tx.explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`glass-card p-5 flex items-center justify-between border-l-2 ${tx.chainBorderColor} hover:border-primary/30 transition-all duration-300 hover:shadow-lg block`}
+                  >
                     <div className="flex items-center gap-4">
                       {/* Chain Icon */}
                       <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
@@ -364,17 +463,11 @@ export function History() {
                         </p>
                       )}
                     </div>
-                  </div>
+                  </a>
                 ))}
               </div>
             </div>
           ))}
-
-          {filteredTxs.length === 0 && (
-            <div className="glass-card p-16 text-center">
-              <p className="font-light text-white/30 tracking-wide">No transactions found</p>
-            </div>
-          )}
         </div>
 
         {/* Audit Section */}

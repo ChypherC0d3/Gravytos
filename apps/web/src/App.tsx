@@ -1,5 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import { Component, type ReactNode } from 'react';
+import { usePrices } from './hooks/usePrices';
+import { useBtcBalance } from './hooks/useBtcBalance';
+import { useSolBalance } from './hooks/useSolBalance';
 
 // Error Boundary to catch page-level crashes
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -39,6 +42,10 @@ function Loading() {
 }
 
 export function App() {
+  usePrices();
+  useBtcBalance();
+  useSolBalance();
+
   return (
     <div className="min-h-screen bg-[hsl(220,30%,6%)] text-white">
       <ErrorBoundary>

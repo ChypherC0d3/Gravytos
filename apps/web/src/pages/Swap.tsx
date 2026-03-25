@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { PrivacyLevel } from '@gravytos/types';
 import { PrivacySlider } from '@gravytos/ui';
 import { usePrivacyStore } from '@gravytos/state';
+import { useERC20Approval } from '../hooks/useERC20Approval';
+import { useAccount } from 'wagmi';
+import { getTokenAddress } from '@gravytos/config';
 
 // ─── Chain & Token Definitions ───────────────────────────────
 
@@ -26,6 +29,7 @@ const TOKENS_BY_CHAIN: Record<string, string[]> = {
 
 interface MockQuote {
   provider: string;
+  inputAmount: string;
   outputAmount: string;
   estimatedGas: string;
   priceImpact: number;
@@ -83,6 +87,7 @@ function Navbar() {
 
 export function Swap() {
   const { globalLevel } = usePrivacyStore();
+  const { address: _walletAddress } = useAccount();
 
   const [fromChain, setFromChain] = useState('ethereum-1');
   const [fromToken, setFromToken] = useState('ETH');
@@ -98,6 +103,20 @@ export function Swap() {
   const [swapping, setSwapping] = useState(false);
   const [swapStep, setSwapStep] = useState<SwapStep | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [swapPhase, setSwapPhase] = useState<'quote' | 'approve' | 'swap' | 'done'>('quote');
+
+  // Determine if the fromToken is native (no approval needed)
+  const NATIVE_SYMBOLS = ['ETH', 'MATIC', 'SOL', 'BTC'];
+  const isNativeFrom = NATIVE_SYMBOLS.includes(fromToken);
+
+  // ERC20 approval hook for non-native tokens
+  const evmChainId = fromChain.includes('ethereum') ? 1
+    : fromChain.includes('polygon') ? 137
+    : fromChain.includes('arbitrum') ? 42161
+    : fromChain.includes('base') ? 8453
+    : fromChain.includes('optimism') ? 10 : 1;
+  const fromTokenAddress = !isNativeFrom ? getTokenAddress(evmChainId, fromToken) : undefined;
+  const { needsApproval, requestApproval, isApproving } = useERC20Approval(fromTokenAddress);
 
   const tokens = TOKENS_BY_CHAIN[fromChain] ?? [];
   const effectiveSlippage = customSlippage ? Number(customSlippage) : slippage;
@@ -118,51 +137,86 @@ export function Swap() {
   }
 
   async function getQuote() {
-    if (!amount || Number(amount) <= 0) return;
+    if (!amount || parseFloat(amount) <= 0) return;
     setLoading(true);
     setQuotes([]);
 
+    // Simulated quote (will be replaced with real API call)
     await new Promise((r) => setTimeout(r, 1000 + Math.random() * 500));
 
-    const inputNum = Number(amount);
+    const inputAmt = parseFloat(amount);
+    const mockRate = fromToken === 'ETH' ? 2400 : fromToken === 'SOL' ? 140 : fromToken === 'MATIC' ? 0.85 : 1;
+    const toRate = toToken === 'USDC' || toToken === 'USDT' ? 1 : toToken === 'ETH' ? 2400 : toToken === 'SOL' ? 140 : toToken === 'MATIC' ? 0.85 : 1;
+    const baseOutput = inputAmt * mockRate / toRate;
+
     const mockQuotes: MockQuote[] = [
       {
         provider: 'Uniswap V3',
-        outputAmount: (inputNum * 2415.5 * 0.997).toFixed(2),
+        inputAmount: amount,
+        outputAmount: (baseOutput * 0.997).toFixed(6),
         estimatedGas: '0.0023',
         priceImpact: 0.05,
-        platformFee: (inputNum * 0.003).toFixed(6),
+        platformFee: (inputAmt * mockRate * 0.003).toFixed(2),
       },
       {
         provider: '1inch',
-        outputAmount: (inputNum * 2413.8 * 0.997).toFixed(2),
+        inputAmount: amount,
+        outputAmount: (baseOutput * 0.9965).toFixed(6),
         estimatedGas: '0.0019',
         priceImpact: 0.08,
-        platformFee: (inputNum * 0.003).toFixed(6),
+        platformFee: (inputAmt * mockRate * 0.003).toFixed(2),
       },
       {
         provider: 'SushiSwap',
-        outputAmount: (inputNum * 2410.2 * 0.997).toFixed(2),
+        inputAmount: amount,
+        outputAmount: (baseOutput * 0.995).toFixed(6),
         estimatedGas: '0.0025',
         priceImpact: 0.12,
-        platformFee: (inputNum * 0.003).toFixed(6),
+        platformFee: (inputAmt * mockRate * 0.003).toFixed(2),
       },
     ];
 
     setQuotes(mockQuotes);
     setSelectedQuote(0);
+    setSwapPhase('quote');
     setLoading(false);
+  }
+
+  function handleApprove() {
+    if (isNativeFrom) {
+      // Native tokens don't need approval, go straight to swap
+      setSwapPhase('swap');
+      return;
+    }
+    // Check if approval is needed (default to 18 decimals, 6 for stablecoins)
+    const decimals = ['USDC', 'USDT'].includes(fromToken) ? 6 : 18;
+    if (needsApproval(amount, decimals)) {
+      setSwapPhase('approve');
+      requestApproval();
+    } else {
+      setSwapPhase('swap');
+    }
   }
 
   async function handleSwap() {
     if (quotes.length === 0) return;
+
+    // If non-native and not yet approved, trigger approval first
+    if (!isNativeFrom && swapPhase === 'quote') {
+      handleApprove();
+      return;
+    }
+
     setSwapping(true);
-    const steps: SwapStep[] = ['approving', 'swapping', 'confirming'];
+    const steps: SwapStep[] = isNativeFrom
+      ? ['swapping', 'confirming']
+      : ['approving', 'swapping', 'confirming'];
     for (const step of steps) {
       setSwapStep(step);
       await new Promise((r) => setTimeout(r, 900 + Math.random() * 700));
     }
     setSwapStep('done');
+    setSwapPhase('done');
     setTxHash('0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
     setSwapping(false);
   }
@@ -173,6 +227,7 @@ export function Swap() {
     setTxHash(null);
     setSwapStep(null);
     setSwapping(false);
+    setSwapPhase('quote');
   }
 
   return (
@@ -441,14 +496,27 @@ export function Swap() {
                   </div>
                 )}
 
+                {/* Approval Button (for non-native tokens) */}
+                {!isNativeFrom && swapPhase === 'quote' && (
+                  <button
+                    onClick={handleApprove}
+                    disabled={isApproving}
+                    className="btn-bevel w-full py-3.5 disabled:opacity-60"
+                  >
+                    {isApproving ? `Approving ${fromToken}...` : `Approve ${fromToken}`}
+                  </button>
+                )}
+
                 {/* Swap Button */}
-                <button
-                  onClick={handleSwap}
-                  disabled={swapping}
-                  className="btn-bevel w-full py-3.5 disabled:opacity-60"
-                >
-                  {swapping ? 'Swapping...' : `Swap ${amount} ${fromToken} for ${toToken}`}
-                </button>
+                {(isNativeFrom || swapPhase === 'swap' || swapPhase === 'done') && (
+                  <button
+                    onClick={handleSwap}
+                    disabled={swapping}
+                    className="btn-bevel w-full py-3.5 disabled:opacity-60"
+                  >
+                    {swapping ? 'Swapping...' : `Swap ${amount} ${fromToken} for ${toToken}`}
+                  </button>
+                )}
               </div>
             )}
           </div>

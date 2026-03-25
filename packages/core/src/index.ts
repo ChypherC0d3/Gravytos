@@ -6,7 +6,15 @@
 export type { ChainAdapter } from './chain-adapters/types';
 export { ChainAdapterRegistry } from './chain-adapters/registry';
 export { EVMAdapter } from './chain-adapters/evm/evm-adapter';
-export { ERC20_ABI, NATIVE_TOKEN_ADDRESS, isNativeToken } from './chain-adapters/evm/erc20';
+export {
+  ERC20_ABI,
+  NATIVE_TOKEN_ADDRESS,
+  isNativeToken,
+  ERC20_TRANSFER_ABI,
+  ERC20_APPROVE_ABI,
+  ERC20_ALLOWANCE_ABI,
+  DEX_ROUTER_ADDRESSES,
+} from './chain-adapters/evm/erc20';
 export { SolanaAdapter } from './chain-adapters/solana/solana-adapter';
 
 // ── Bitcoin Adapter ───────────────────────────────────────────
@@ -52,6 +60,8 @@ export { AuditExporter } from './audit-engine/audit-exporter';
 export { TransactionEngine } from './transaction-engine/transaction-engine';
 export { SwapEngine } from './transaction-engine/swap-engine';
 export { BridgeEngine } from './transaction-engine/bridge-engine';
+export { TransactionHistoryService } from './transaction-engine/history-service';
+export type { HistoricalTransaction } from './transaction-engine/history-service';
 
 // ── Network ────────────────────────────────────────────────────
 export { NetworkManager } from './network/network-manager';
@@ -73,6 +83,9 @@ export type { EncryptedVault, SecureStorage } from './key-management';
 
 // ── Wallet ────────────────────────────────────────────────────
 export { WalletManager } from './wallet';
+
+// ── Price ──────────────────────────────────────────────────────
+export { PriceService } from './price/price-service';
 
 // ── Errors ─────────────────────────────────────────────────────
 export {

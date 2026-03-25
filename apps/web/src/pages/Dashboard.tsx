@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { PrivacyLevel } from '@gravytos/types';
 import { PrivacySlider } from '@gravytos/ui';
-import { useWalletStore } from '@gravytos/state';
+import { useWalletStore, usePriceStore } from '@gravytos/state';
 import { ConnectWalletButton } from '../components/ConnectWalletButton';
 import { CreateWalletModal } from '../components/CreateWalletModal';
 import { UnlockWalletModal } from '../components/UnlockWalletModal';
@@ -59,6 +59,7 @@ const ACTIONS = [
 export function Dashboard() {
   const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>(PrivacyLevel.Medium);
   const { evmAddress, solanaAddress, btcAddress, balances, evmChainId } = useWalletStore();
+  const getPrice = usePriceStore((s) => s.getPrice);
 
   // Wallet management for CTA and unlock
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -95,14 +96,21 @@ export function Dashboard() {
       const chainKey = def.storeKey === 'evmAddress' && evmChainId ? `ethereum-${evmChainId}` : def.balanceChainKey;
       const chainBalances = chainKey ? balances[chainKey] : undefined;
       const tokenBalance = chainBalances?.[def.symbol];
+      const balanceNum = parseFloat(tokenBalance?.formatted ?? '0');
+      const usdValue = balanceNum * getPrice(def.symbol);
       return {
         ...def,
         address: truncateAddress(address),
         balance: tokenBalance?.formatted ?? '0.0000',
+        usdValue,
         connected: !!address,
       };
     });
-  }, [evmAddress, solanaAddress, btcAddress, balances, evmChainId]);
+  }, [evmAddress, solanaAddress, btcAddress, balances, evmChainId, getPrice]);
+
+  const portfolioTotal = useMemo(() => {
+    return wallets.reduce((sum, w) => sum + w.usdValue, 0);
+  }, [wallets]);
 
   return (
     <div className="min-h-screen dark">
@@ -156,7 +164,9 @@ export function Dashboard() {
               <div className="absolute inset-0 opacity-5 gradient-hero" />
               <div className="relative z-10">
                 <h2 className="text-sm font-light tracking-wider text-white/40 mb-2 uppercase">Total Portfolio Value</h2>
-                <div className="text-4xl font-light tracking-wide glow-text text-gradient">$0.00</div>
+                <div className="text-4xl font-light tracking-wide glow-text text-gradient">
+                  ${portfolioTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
                 <p className="text-xs font-light text-white/30 mt-2 tracking-wide">
                   {hasConnectedAddress ? 'Wallet connected' : 'Connect a wallet to get started'}
                 </p>
@@ -243,7 +253,9 @@ export function Dashboard() {
                     </div>
                     <div className="text-right">
                       <div className="font-light tracking-wide text-sm text-white/80">{wallet.balance} {wallet.symbol}</div>
-                      <div className="text-xs text-white/25">$0.00</div>
+                      <div className="text-xs text-white/25">
+                        ${wallet.usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -5,8 +5,9 @@ import type { TransactionRequest } from '@gravytos/types';
 import { PrivacySlider } from '@gravytos/ui';
 import { usePrivacyStore, useWalletStore } from '@gravytos/state';
 import { getTokenAddress, NATIVE_TOKEN_ADDRESS } from '@gravytos/config';
+import { ERC20_TRANSFER_ABI } from '@gravytos/core';
 import { useSendTransaction, useWriteContract, useAccount } from 'wagmi';
-import { parseEther, parseUnits, erc20Abi } from 'viem';
+import { parseEther, parseUnits } from 'viem';
 import { ConnectWalletButton } from '../components/ConnectWalletButton';
 import { TransactionConfirmModal } from '../components/TransactionConfirmModal';
 import type { TransactionConfirmDetails } from '../components/TransactionConfirmModal';
@@ -350,7 +351,7 @@ export function Send() {
         wagmiWriteContract(
           {
             address: tokenAddr as `0x${string}`,
-            abi: erc20Abi,
+            abi: ERC20_TRANSFER_ABI,
             functionName: 'transfer',
             args: [recipient as `0x${string}`, parsedAmount],
           },
@@ -410,14 +411,17 @@ export function Send() {
     }
 
     // ─── Bitcoin flow ─────────────────────────────────────────
+    // BTC send: derive key, build PSBT, sign, broadcast
+    // Full flow will use WalletManager + BitcoinAdapter
     if (selectedChain.family === 'bitcoin') {
-      setTxError('Connect a Bitcoin wallet to send BTC transactions. Internal key management coming soon.');
+      setTxStep('building');
       setTxStep(null);
       setSending(false);
+      setTxError('BTC send requires wallet to be unlocked in Settings first');
       setToastData({
         id: Date.now().toString(),
         status: 'failed',
-        errorMessage: 'Bitcoin wallet not connected',
+        errorMessage: 'BTC send requires wallet to be unlocked in Settings first',
       });
       return;
     }
@@ -425,13 +429,14 @@ export function Send() {
     // ─── Solana flow ──────────────────────────────────────────
     if (selectedChain.family === 'solana') {
       if (!solanaAddress) {
-        setTxError('Connect a Solana wallet first to send SOL transactions.');
+        setTxStep('building');
         setTxStep(null);
         setSending(false);
+        setTxError('SOL send requires wallet to be unlocked in Settings first');
         setToastData({
           id: Date.now().toString(),
           status: 'failed',
-          errorMessage: 'Solana wallet not connected',
+          errorMessage: 'SOL send requires wallet to be unlocked in Settings first',
         });
         return;
       }
