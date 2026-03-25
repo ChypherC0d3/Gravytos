@@ -1,8 +1,7 @@
-// Polyfills for Node.js APIs used by crypto libraries (Solana, Bitcoin)
+// Real Buffer polyfill (the inline script in index.html provides a stub,
+// this replaces it with the full implementation before React mounts)
 import { Buffer } from 'buffer';
 globalThis.Buffer = Buffer;
-// @ts-expect-error - process polyfill for Node.js libraries in browser
-globalThis.process = globalThis.process || { env: {}, browser: true, version: '' };
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';

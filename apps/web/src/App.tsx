@@ -1,10 +1,10 @@
 import { Routes, Route } from 'react-router-dom';
-import { Component, type ReactNode } from 'react';
+import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { usePrices } from './hooks/usePrices';
 import { useBtcBalance } from './hooks/useBtcBalance';
 import { useSolBalance } from './hooks/useSolBalance';
 
-// Error Boundary to catch page-level crashes
+// Error Boundary
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
   static getDerivedStateFromError(error: Error) { return { error }; }
@@ -15,6 +15,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
           <h2>Page Error</h2>
           <pre style={{ whiteSpace: 'pre-wrap', fontSize: 14 }}>{this.state.error.message}</pre>
           <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: '#666', marginTop: 10 }}>{this.state.error.stack}</pre>
+          <button onClick={() => this.setState({ error: null })} style={{ marginTop: 20, padding: '8px 16px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+            Try Again
+          </button>
         </div>
       );
     }
@@ -22,8 +25,6 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
-// Lazy load pages to isolate errors
-import { lazy, Suspense } from 'react';
 const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Send = lazy(() => import('./pages/Send').then(m => ({ default: m.Send })));
@@ -35,8 +36,11 @@ const History = lazy(() => import('./pages/History').then(m => ({ default: m.His
 
 function Loading() {
   return (
-    <div style={{ color: 'white', background: '#0d1117', padding: 40, textAlign: 'center' }}>
-      <p>Loading Gravytos...</p>
+    <div style={{ color: '#a78bfa', background: '#0d1117', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 32, fontWeight: 300, marginBottom: 8 }}>Gravytos</div>
+        <div style={{ fontSize: 14, color: '#666' }}>Loading...</div>
+      </div>
     </div>
   );
 }
