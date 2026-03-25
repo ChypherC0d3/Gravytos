@@ -1,0 +1,20 @@
+{
+  "name": "@gravytos/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@gravytos/types": "*",
+    "@gravytos/config": "*",
+    "@supabase/supabase-js": "^2.84.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
