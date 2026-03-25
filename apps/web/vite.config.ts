@@ -15,10 +15,15 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  define: {
+    // Polyfill for Node.js globals used by crypto libraries
+    global: 'globalThis',
+  },
   server: {
     port: 5173,
   },
   optimizeDeps: {
     exclude: ['tiny-secp256k1'],
+    include: ['buffer'],
   },
 });

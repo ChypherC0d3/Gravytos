@@ -1,13 +1,17 @@
-import { WagmiProvider as WagmiProviderBase, http } from 'wagmi';
+import { WagmiProvider as WagmiProviderBase, createConfig, http } from 'wagmi';
 import { mainnet, polygon, arbitrum, base, optimism } from 'wagmi/chains';
-import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import '@rainbow-me/rainbowkit/styles.css';
+import { injected, coinbaseWallet } from 'wagmi/connectors';
+import type { ReactNode } from 'react';
 
-const config = getDefaultConfig({
-  appName: 'Gravytos',
-  projectId: 'gravytos-dev', // WalletConnect project ID - placeholder for dev
+// Create wagmi config WITHOUT WalletConnect (avoids projectId requirement)
+// Users can still connect via MetaMask (injected) and Coinbase Wallet
+const config = createConfig({
   chains: [mainnet, polygon, arbitrum, base, optimism],
+  connectors: [
+    injected(),
+    coinbaseWallet({ appName: 'Gravytos' }),
+  ],
   transports: {
     [mainnet.id]: http(),
     [polygon.id]: http(),
@@ -19,14 +23,14 @@ const config = getDefaultConfig({
 
 const queryClient = new QueryClient();
 
-export function EVMProvider({ children }: { children: React.ReactNode }) {
+export function EVMProvider({ children }: { children: ReactNode }) {
   return (
     <WagmiProviderBase config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={darkTheme({ accentColor: '#7c3aed', borderRadius: 'medium' })}>
-          {children}
-        </RainbowKitProvider>
+        {children}
       </QueryClientProvider>
     </WagmiProviderBase>
   );
 }
+
+export { config as wagmiConfig };
