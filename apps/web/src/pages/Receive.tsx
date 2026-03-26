@@ -135,7 +135,7 @@ export function Receive() {
 
         {/* QR Code & Address */}
         <div className="glass-card p-5 md:p-10 text-center space-y-6 md:space-y-8 animate-pulse-glow">
-          <QRCode value={currentAddress} size={200} chain={getChainType(chain)} className="shadow-lg shadow-purple-500/10 mx-auto w-[200px] h-[200px] md:w-[280px] md:h-[280px]" />
+          <QRCode value={currentAddress} size={200} chain={getChainType(chain)} className="shadow-lg shadow-purple-500/10 mx-auto" />
 
           <div>
             <p className="text-xs font-light tracking-wider text-white/30 mb-3 uppercase">Your {selectedChain.name} Address</p>
