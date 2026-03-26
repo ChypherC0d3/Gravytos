@@ -58,17 +58,19 @@ jobs:
         working-directory: apps/desktop
 
       - name: Verify dist exists
-        run: ls -la dist/
+        run: test -f dist/index.html && echo "dist OK" || (echo "dist MISSING" && exit 1)
         working-directory: apps/desktop
+        shell: bash
 
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0"
 
       - name: Build Tauri
-        run: cargo tauri build --target ${{ matrix.target }}
+        run: cargo tauri build --target ${{ matrix.target }} --verbose
         working-directory: apps/desktop
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
+          RUST_BACKTRACE: "1"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
