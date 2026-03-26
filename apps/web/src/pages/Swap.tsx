@@ -4,10 +4,12 @@ import { PrivacyLevel } from '@gravytos/types';
 import { PrivacySlider } from '@gravytos/ui';
 import { usePrivacyStore } from '@gravytos/state';
 import { useERC20Approval } from '../hooks/useERC20Approval';
-import { useAccount } from 'wagmi';
-import { getTokenAddress } from '@gravytos/config';
+import { useTransactionEngine } from '../hooks/useTransactionEngine';
+import { useAccount, useSendTransaction } from 'wagmi';
+import { getTokenAddress, NATIVE_TOKEN_ADDRESS } from '@gravytos/config';
 import { TokenPicker } from '../components/TokenPicker';
 import type { Token } from '../components/TokenPicker';
+import type { SwapQuote } from '@gravytos/types';
 
 // ─── Chain & Token Definitions ───────────────────────────────
 
@@ -28,15 +30,6 @@ const TOKENS_BY_CHAIN: Record<string, string[]> = {
   'optimism-10': ['ETH', 'USDC', 'USDT', 'OP', 'SNX'],
   'solana-mainnet': ['SOL', 'USDC', 'USDT', 'RAY', 'JUP', 'BONK'],
 };
-
-interface MockQuote {
-  provider: string;
-  inputAmount: string;
-  outputAmount: string;
-  estimatedGas: string;
-  priceImpact: number;
-  platformFee: string;
-}
 
 // ─── Tx Progress Steps ───────────────────────────────────────
 
@@ -89,7 +82,9 @@ function Navbar() {
 
 export function Swap() {
   const { globalLevel } = usePrivacyStore();
-  const { address: _walletAddress } = useAccount();
+  const { address: walletAddress } = useAccount();
+  const { sendTransactionAsync } = useSendTransaction();
+  const { getSwapQuote, executeSwap } = useTransactionEngine();
 
   const [fromChain, setFromChain] = useState('ethereum-1');
   const [fromToken, setFromToken] = useState('ETH');
@@ -99,8 +94,7 @@ export function Swap() {
   const [customSlippage, setCustomSlippage] = useState('');
   const [showSlippageSettings, setShowSlippageSettings] = useState(false);
   const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>(globalLevel);
-  const [quotes, setQuotes] = useState<MockQuote[]>([]);
-  const [selectedQuote, setSelectedQuote] = useState<number>(0);
+  const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [loading, setLoading] = useState(false);
   const [swapping, setSwapping] = useState(false);
   const [swapStep, setSwapStep] = useState<SwapStep | null>(null);
@@ -108,6 +102,7 @@ export function Swap() {
   const [swapPhase, setSwapPhase] = useState<'quote' | 'approve' | 'swap' | 'done'>('quote');
   const [showFromTokenPicker, setShowFromTokenPicker] = useState(false);
   const [showToTokenPicker, setShowToTokenPicker] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Determine if the fromToken is native (no approval needed)
   const NATIVE_SYMBOLS = ['ETH', 'MATIC', 'SOL', 'BTC'];
@@ -124,74 +119,71 @@ export function Swap() {
 
   const effectiveSlippage = customSlippage ? Number(customSlippage) : slippage;
 
+  const isSolana = fromChain === 'solana-mainnet';
+
   function handleChainChange(newChain: string) {
     setFromChain(newChain);
     const newTokens = TOKENS_BY_CHAIN[newChain] ?? [];
     setFromToken(newTokens[0] ?? 'ETH');
     setToToken(newTokens[1] ?? 'USDC');
-    setQuotes([]);
+    setQuote(null);
+    setError(null);
   }
 
   function flipTokens() {
     const temp = fromToken;
     setFromToken(toToken);
     setToToken(temp);
-    setQuotes([]);
+    setQuote(null);
+    setError(null);
   }
 
+  /**
+   * Fetch a real swap quote from 1inch (EVM) or Jupiter (Solana).
+   */
   async function getQuote() {
     if (!amount || parseFloat(amount) <= 0) return;
+    if (!walletAddress && !isSolana) {
+      setError('Please connect your wallet first.');
+      return;
+    }
+
     setLoading(true);
-    setQuotes([]);
+    setQuote(null);
+    setError(null);
 
-    // Simulated quote (will be replaced with real API call)
-    await new Promise((r) => setTimeout(r, 1000 + Math.random() * 500));
+    try {
+      // Resolve token addresses
+      const fromAddr = getTokenAddress(evmChainId, fromToken) || NATIVE_TOKEN_ADDRESS;
+      const toAddr = getTokenAddress(evmChainId, toToken) || NATIVE_TOKEN_ADDRESS;
 
-    const inputAmt = parseFloat(amount);
-    const mockRate = fromToken === 'ETH' ? 2400 : fromToken === 'SOL' ? 140 : fromToken === 'MATIC' ? 0.85 : 1;
-    const toRate = toToken === 'USDC' || toToken === 'USDT' ? 1 : toToken === 'ETH' ? 2400 : toToken === 'SOL' ? 140 : toToken === 'MATIC' ? 0.85 : 1;
-    const baseOutput = inputAmt * mockRate / toRate;
+      // Convert amount to smallest unit (wei for 18 decimals, or 6 for stablecoins)
+      const decimals = ['USDC', 'USDT'].includes(fromToken) ? 6 : 18;
+      const amountInSmallestUnit = BigInt(Math.floor(parseFloat(amount) * 10 ** decimals)).toString();
 
-    const mockQuotes: MockQuote[] = [
-      {
-        provider: 'Uniswap V3',
-        inputAmount: amount,
-        outputAmount: (baseOutput * 0.997).toFixed(6),
-        estimatedGas: '0.0023',
-        priceImpact: 0.05,
-        platformFee: (inputAmt * mockRate * 0.003).toFixed(2),
-      },
-      {
-        provider: '1inch',
-        inputAmount: amount,
-        outputAmount: (baseOutput * 0.9965).toFixed(6),
-        estimatedGas: '0.0019',
-        priceImpact: 0.08,
-        platformFee: (inputAmt * mockRate * 0.003).toFixed(2),
-      },
-      {
-        provider: 'SushiSwap',
-        inputAmount: amount,
-        outputAmount: (baseOutput * 0.995).toFixed(6),
-        estimatedGas: '0.0025',
-        priceImpact: 0.12,
-        platformFee: (inputAmt * mockRate * 0.003).toFixed(2),
-      },
-    ];
+      const result = await getSwapQuote({
+        chainId: fromChain,
+        fromToken: fromAddr,
+        toToken: toAddr,
+        amount: amountInSmallestUnit,
+        slippage: effectiveSlippage,
+        userAddress: walletAddress || '',
+      });
 
-    setQuotes(mockQuotes);
-    setSelectedQuote(0);
-    setSwapPhase('quote');
-    setLoading(false);
+      setQuote(result);
+      setSwapPhase('quote');
+    } catch (err: any) {
+      setError(err.message || 'Failed to get quote. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleApprove() {
     if (isNativeFrom) {
-      // Native tokens don't need approval, go straight to swap
       setSwapPhase('swap');
       return;
     }
-    // Check if approval is needed (default to 18 decimals, 6 for stablecoins)
     const decimals = ['USDC', 'USDT'].includes(fromToken) ? 6 : 18;
     if (needsApproval(amount, decimals)) {
       setSwapPhase('approve');
@@ -201,8 +193,15 @@ export function Swap() {
     }
   }
 
+  /**
+   * Execute the real swap via 1inch API + wagmi sendTransaction.
+   */
   async function handleSwap() {
-    if (quotes.length === 0) return;
+    if (!quote) return;
+    if (!walletAddress) {
+      setError('Please connect your wallet first.');
+      return;
+    }
 
     // If non-native and not yet approved, trigger approval first
     if (!isNativeFrom && swapPhase === 'quote') {
@@ -211,26 +210,105 @@ export function Swap() {
     }
 
     setSwapping(true);
-    const steps: SwapStep[] = isNativeFrom
-      ? ['swapping', 'confirming']
-      : ['approving', 'swapping', 'confirming'];
-    for (const step of steps) {
-      setSwapStep(step);
-      await new Promise((r) => setTimeout(r, 900 + Math.random() * 700));
+    setError(null);
+
+    try {
+      // Step 1: Get executable swap data from 1inch
+      const fromAddr = getTokenAddress(evmChainId, fromToken) || NATIVE_TOKEN_ADDRESS;
+      const toAddr = getTokenAddress(evmChainId, toToken) || NATIVE_TOKEN_ADDRESS;
+      const decimals = ['USDC', 'USDT'].includes(fromToken) ? 6 : 18;
+      const amountInSmallestUnit = BigInt(Math.floor(parseFloat(amount) * 10 ** decimals)).toString();
+
+      const steps: SwapStep[] = isNativeFrom
+        ? ['swapping', 'confirming']
+        : ['approving', 'swapping', 'confirming'];
+
+      // If approval needed, show approval step
+      if (!isNativeFrom && steps.includes('approving')) {
+        setSwapStep('approving');
+      }
+
+      setSwapStep('swapping');
+
+      const swapResult = await executeSwap({
+        chainId: fromChain,
+        fromToken: fromAddr,
+        toToken: toAddr,
+        amount: amountInSmallestUnit,
+        slippage: effectiveSlippage,
+        userAddress: walletAddress,
+      });
+
+      if (!swapResult.tx) {
+        throw new Error('No transaction data returned from 1inch.');
+      }
+
+      // Step 2: Send the transaction via wagmi
+      setSwapStep('confirming');
+
+      const txResult = await sendTransactionAsync({
+        to: swapResult.tx.to as `0x${string}`,
+        data: swapResult.tx.data as `0x${string}`,
+        value: BigInt(swapResult.tx.value || '0'),
+      });
+
+      setSwapStep('done');
+      setSwapPhase('done');
+      setTxHash(txResult);
+    } catch (err: any) {
+      const message = err.message || 'Swap failed';
+      // User-friendly error messages
+      if (message.includes('rejected') || message.includes('denied')) {
+        setError('Transaction was rejected in wallet.');
+      } else if (message.includes('insufficient')) {
+        setError('Insufficient balance for this swap.');
+      } else if (message.includes('timed out')) {
+        setError('Request timed out. Please try again.');
+      } else {
+        setError(message.length > 200 ? message.substring(0, 200) + '...' : message);
+      }
+    } finally {
+      setSwapping(false);
     }
-    setSwapStep('done');
-    setSwapPhase('done');
-    setTxHash('0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
-    setSwapping(false);
   }
 
   function resetForm() {
     setAmount('');
-    setQuotes([]);
+    setQuote(null);
     setTxHash(null);
     setSwapStep(null);
     setSwapping(false);
     setSwapPhase('quote');
+    setError(null);
+  }
+
+  /** Format output amount from smallest unit to human-readable */
+  function formatOutputAmount(): string {
+    if (!quote) return '0.00';
+    const toDecimals = ['USDC', 'USDT'].includes(toToken) ? 6 : 18;
+    try {
+      const raw = BigInt(quote.outputAmount);
+      const divisor = BigInt(10 ** toDecimals);
+      const whole = raw / divisor;
+      const frac = raw % divisor;
+      const fracStr = frac.toString().padStart(toDecimals, '0').slice(0, 6);
+      return `${whole}.${fracStr}`;
+    } catch {
+      return quote.outputAmount;
+    }
+  }
+
+  /** Format gas estimate to readable ETH amount */
+  function formatGasEstimate(): string {
+    if (!quote || !quote.estimatedGas || quote.estimatedGas === '0') return 'N/A';
+    try {
+      // Gas is in gas units; estimate cost at ~30 gwei
+      const gasUnits = Number(quote.estimatedGas);
+      const gasCostWei = gasUnits * 30e9; // 30 gwei
+      return (gasCostWei / 1e18).toFixed(6) + ' ETH';
+    } catch {
+      return quote.estimatedGas;
+    }
   }
 
   return (
@@ -239,6 +317,20 @@ export function Swap() {
 
       <main className="max-w-md md:max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-24 md:pb-8">
         <h1 className="text-xl md:text-2xl font-light tracking-wide mb-4 md:mb-6 text-white/90">Swap</h1>
+
+        {/* Error Toast */}
+        {error && (
+          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-light">
+            <div className="flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 ml-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Success State */}
         {txHash ? (
@@ -250,7 +342,7 @@ export function Swap() {
             </div>
             <h2 className="text-xl font-light tracking-wide text-emerald-400">Swap Complete</h2>
             <p className="text-sm font-light text-white/40">
-              Swapped {amount} {fromToken} for {quotes[selectedQuote]?.outputAmount} {toToken}
+              Swapped {amount} {fromToken} for {formatOutputAmount()} {toToken}
             </p>
             <div className="glass-card p-4">
               <p className="text-xs font-light text-white/30 mb-1">Transaction Hash</p>
@@ -305,7 +397,7 @@ export function Swap() {
                   <input
                     type="number"
                     value={amount}
-                    onChange={(e) => { setAmount(e.target.value); setQuotes([]); }}
+                    onChange={(e) => { setAmount(e.target.value); setQuote(null); setError(null); }}
                     placeholder="0.00"
                     min="0"
                     step="any"
@@ -350,7 +442,7 @@ export function Swap() {
                   </svg>
                 </button>
                 <div className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-4 py-2.5 min-h-12 text-sm font-mono text-white/40 flex items-center">
-                  {quotes.length > 0 ? quotes[selectedQuote].outputAmount : '0.00'}
+                  {quote ? formatOutputAmount() : '0.00'}
                 </div>
               </div>
             </div>
@@ -407,8 +499,8 @@ export function Swap() {
               <span>0.3%</span>
             </div>
 
-            {/* Get Quote / Route Comparison */}
-            {quotes.length === 0 ? (
+            {/* Get Quote / Quote Details */}
+            {!quote ? (
               <button
                 onClick={getQuote}
                 disabled={!amount || Number(amount) <= 0 || loading}
@@ -424,54 +516,70 @@ export function Swap() {
                       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
                       <path d="M4 12a8 8 0 0 1 8-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" />
                     </svg>
-                    Finding best route...
+                    Getting real-time quote...
                   </span>
                 ) : 'Get Quote'}
               </button>
             ) : (
               <div className="space-y-4">
-                {/* Route Comparison */}
-                <div>
-                  <h3 className="text-xs font-light tracking-wider text-white/30 mb-2 uppercase">Routes</h3>
-                  <div className="space-y-2">
-                    {quotes.map((q, i) => (
-                      <button
-                        key={q.provider}
-                        onClick={() => setSelectedQuote(i)}
-                        className={`w-full p-5 rounded-xl border text-left transition-all duration-300 ${
-                          selectedQuote === i
-                            ? 'glass-card border-purple-500/30 shadow-lg shadow-purple-500/5'
-                            : 'bg-white/[0.02] border-white/5 hover:border-white/15'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-sm font-light tracking-wide text-white/80">{q.provider}</span>
-                          {i === 0 && (
-                            <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 animate-pulse-glow">
-                              BEST
-                            </span>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div>
-                            <p className="font-light text-white/25">Output</p>
-                            <p className="text-white/70 font-mono">{q.outputAmount} {toToken}</p>
-                          </div>
-                          <div>
-                            <p className="font-light text-white/25">Gas</p>
-                            <p className="text-white/70 font-mono">{q.estimatedGas} ETH</p>
-                          </div>
-                          <div>
-                            <p className="font-light text-white/25">Impact</p>
-                            <p className={`font-mono ${q.priceImpact > 1 ? 'text-red-400' : 'text-white/70'}`}>
-                              {q.priceImpact}%
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
+                {/* Quote Details */}
+                <div className="glass-card p-6 space-y-3 gradient-border">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-light tracking-wide text-white/80">Quote from {quote.provider}</h3>
+                    <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      LIVE
+                    </span>
                   </div>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="font-light text-white/30">You pay</span>
+                      <span className="text-white/70 font-mono">{amount} {fromToken}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-light text-white/30">You receive</span>
+                      <span className="text-white/70 font-mono">{formatOutputAmount()} {toToken}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-light text-white/30">Est. Gas</span>
+                      <span className="text-white/50 font-mono">{formatGasEstimate()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-light text-white/30">Slippage</span>
+                      <span className="text-white/50">{effectiveSlippage}%</span>
+                    </div>
+                    {quote.priceImpact > 0 && (
+                      <div className="flex justify-between">
+                        <span className="font-light text-white/30">Price Impact</span>
+                        <span className={`font-mono ${quote.priceImpact > 1 ? 'text-red-400' : 'text-white/50'}`}>
+                          {quote.priceImpact.toFixed(2)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Route info */}
+                  {quote.route && quote.route.length > 0 && (
+                    <div className="pt-2 border-t border-white/5">
+                      <p className="text-[10px] font-light text-white/25 mb-1">Route</p>
+                      <div className="flex flex-wrap gap-1">
+                        {quote.route.map((r, i) => (
+                          <span key={i} className="text-[10px] font-mono text-white/40 bg-white/5 px-2 py-0.5 rounded">
+                            {r.protocol} ({r.percentage}%)
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* New Quote Button */}
+                <button
+                  onClick={getQuote}
+                  disabled={loading}
+                  className="w-full text-xs font-light text-white/30 hover:text-white/60 tracking-wide transition-colors py-1"
+                >
+                  {loading ? 'Refreshing...' : 'Refresh Quote'}
+                </button>
 
                 {/* Swap Progress */}
                 {swapping && swapStep && (
@@ -539,7 +647,7 @@ export function Swap() {
           selectedToken={fromToken}
           onSelect={(t: Token) => {
             setFromToken(t.symbol);
-            setQuotes([]);
+            setQuote(null);
             setShowFromTokenPicker(false);
           }}
           onClose={() => setShowFromTokenPicker(false)}
@@ -553,7 +661,7 @@ export function Swap() {
           selectedToken={toToken}
           onSelect={(t: Token) => {
             setToToken(t.symbol);
-            setQuotes([]);
+            setQuote(null);
             setShowToTokenPicker(false);
           }}
           onClose={() => setShowToTokenPicker(false)}

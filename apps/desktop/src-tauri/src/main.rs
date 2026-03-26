@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::fs;
 use std::path::PathBuf;
 
 #[tauri::command]
@@ -21,28 +22,21 @@ fn get_app_version() -> String {
 }
 
 #[tauri::command]
-async fn read_file(path: String) -> Result<String, String> {
-    tokio::fs::read_to_string(&path)
-        .await
-        .map_err(|e| format!("Failed to read file: {}", e))
+fn read_file(path: String) -> Result<String, String> {
+    fs::read_to_string(&path).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-async fn write_file(path: String, content: String) -> Result<(), String> {
-    // Ensure parent directory exists
+fn write_file(path: String, content: String) -> Result<(), String> {
     if let Some(parent) = PathBuf::from(&path).parent() {
-        tokio::fs::create_dir_all(parent)
-            .await
-            .map_err(|e| format!("Failed to create directory: {}", e))?;
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    tokio::fs::write(&path, content)
-        .await
-        .map_err(|e| format!("Failed to write file: {}", e))
+    fs::write(&path, content).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-async fn file_exists(path: String) -> bool {
-    tokio::fs::metadata(&path).await.is_ok()
+fn file_exists(path: String) -> bool {
+    PathBuf::from(&path).exists()
 }
 
 fn main() {

@@ -105,13 +105,27 @@ function resolveChainInfo(chainId: string, _chainSymbol: string): {
   if (chainId.startsWith('solana')) {
     return { chain: 'solana', chainIcon: 'S', chainColor: 'text-purple-400', chainBorderColor: 'border-l-purple-500' };
   }
+  // Polygon: ethereum-137
   if (chainId === 'ethereum-137') {
     return { chain: 'polygon', chainIcon: 'P', chainColor: 'text-violet-400', chainBorderColor: 'border-l-violet-500' };
   }
+  // Arbitrum: ethereum-42161
   if (chainId === 'ethereum-42161') {
     return { chain: 'arbitrum', chainIcon: 'A', chainColor: 'text-sky-400', chainBorderColor: 'border-l-sky-500' };
   }
-  // Default to ethereum for chains 1, 10, 8453, etc.
+  // Base: ethereum-8453
+  if (chainId === 'ethereum-8453') {
+    return { chain: 'ethereum', chainIcon: 'Ba', chainColor: 'text-blue-300', chainBorderColor: 'border-l-blue-400' };
+  }
+  // Optimism: ethereum-10
+  if (chainId === 'ethereum-10') {
+    return { chain: 'ethereum', chainIcon: 'Op', chainColor: 'text-red-400', chainBorderColor: 'border-l-red-500' };
+  }
+  // Sepolia testnet: ethereum-11155111
+  if (chainId === 'ethereum-11155111') {
+    return { chain: 'ethereum', chainIcon: 'Se', chainColor: 'text-blue-400', chainBorderColor: 'border-l-blue-500' };
+  }
+  // Default to ethereum for chain 1 and others
   return { chain: 'ethereum', chainIcon: 'E', chainColor: 'text-blue-400', chainBorderColor: 'border-l-blue-500' };
 }
 
@@ -448,6 +462,11 @@ export function History() {
                           <span className="text-[10px] md:text-xs font-mono text-white/25 truncate">{tx.txHash}</span>
                           <span className="text-[10px] text-white/15 shrink-0 hidden sm:inline">{formatTime(tx.timestamp)}</span>
                         </div>
+                        {tx.from && tx.to && (
+                          <div className="text-[10px] font-mono text-white/15 mt-0.5 hidden md:block truncate">
+                            {shortenHash(tx.from)} &rarr; {shortenHash(tx.to)}
+                          </div>
+                        )}
                       </div>
                     </div>
 

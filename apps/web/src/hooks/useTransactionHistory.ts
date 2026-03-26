@@ -24,7 +24,11 @@ export function useTransactionHistory() {
 
     try {
       const history = await serviceRef.current.getAllHistory({
-        evm: evmAddress && evmChainId ? { address: evmAddress, chainId: evmChainId } : undefined,
+        // When a specific chainId is provided, fetch from that chain only.
+        // Otherwise, fetch from all supported EVM chains.
+        evm: evmAddress
+          ? { address: evmAddress, chainId: evmChainId ?? undefined }
+          : undefined,
         btc: btcAddress || undefined,
         sol: solanaAddress || undefined,
       });

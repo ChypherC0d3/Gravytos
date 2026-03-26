@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { PrivacyLevel } from '@gravytos/types';
+import type { BridgeQuote } from '@gravytos/types';
 import { PrivacySlider } from '@gravytos/ui';
 import { usePrivacyStore } from '@gravytos/state';
 import { useERC20Approval } from '../hooks/useERC20Approval';
-import { useAccount } from 'wagmi';
-import { getTokenAddress } from '@gravytos/config';
+import { useTransactionEngine } from '../hooks/useTransactionEngine';
+import { useAccount, useSendTransaction } from 'wagmi';
+import { getTokenAddress, NATIVE_TOKEN_ADDRESS } from '@gravytos/config';
 
 // ─── Chain & Token Definitions ───────────────────────────────
 
@@ -81,7 +83,9 @@ function Navbar() {
 
 export function Bridge() {
   const { globalLevel } = usePrivacyStore();
-  const { address: _walletAddress } = useAccount();
+  const { address: walletAddress } = useAccount();
+  const { sendTransactionAsync } = useSendTransaction();
+  const { getBridgeQuote, executeBridge, trackBridgeStatus } = useTransactionEngine();
 
   const [sourceChain, setSourceChain] = useState('ethereum-1');
   const [destChain, setDestChain] = useState('arbitrum-42161');
@@ -90,13 +94,16 @@ export function Bridge() {
   const [recipientOverride, setRecipientOverride] = useState('');
   const [showRecipient, setShowRecipient] = useState(false);
   const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>(globalLevel);
-  const [hasQuote, setHasQuote] = useState(false);
+  const [bridgeQuote, setBridgeQuote] = useState<BridgeQuote | null>(null);
   const [loading, setLoading] = useState(false);
   const [bridging, setBridging] = useState(false);
   const [bridgeStep, setBridgeStep] = useState<BridgeStep | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [bridgePhase, setBridgePhase] = useState<'quote' | 'approve' | 'bridge' | 'tracking'>('quote');
   const [trackingProgress, setTrackingProgress] = useState(0);
+  const [trackingStatus, setTrackingStatus] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const trackingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Determine if the token is native (no approval needed for bridging)
   const NATIVE_SYMBOLS = ['ETH', 'MATIC', 'SOL', 'BTC'];
@@ -117,17 +124,43 @@ export function Bridge() {
   const destTokens = BRIDGE_TOKENS[destChain] ?? [];
   const commonTokens = tokens.filter((t) => destTokens.includes(t));
 
-  const outputAmount = useMemo(() => {
-    if (!amount || Number(amount) <= 0) return '0.00';
-    const input = Number(amount);
-    return (input * 0.99).toFixed(6);
-  }, [amount]);
+  /** Format output amount from the quote */
+  const formatOutputAmount = useCallback(() => {
+    if (!bridgeQuote) return '0.00';
+    try {
+      const decimals = ['USDC', 'USDT'].includes(token) ? 6 : 18;
+      const raw = BigInt(bridgeQuote.outputAmount);
+      const divisor = BigInt(10 ** decimals);
+      const whole = raw / divisor;
+      const frac = raw % divisor;
+      const fracStr = frac.toString().padStart(decimals, '0').slice(0, 6);
+      return `${whole}.${fracStr}`;
+    } catch {
+      return bridgeQuote.outputAmount;
+    }
+  }, [bridgeQuote, token]);
 
+  /** Format estimated time from seconds */
   const estimatedTime = useMemo(() => {
-    if (sourceChain.includes('bitcoin') || destChain.includes('bitcoin')) return '~30 min';
-    if (sourceChain.includes('solana') || destChain.includes('solana')) return '~5 min';
-    return '~15 min';
-  }, [sourceChain, destChain]);
+    if (!bridgeQuote || !bridgeQuote.estimatedTime) {
+      if (sourceChain.includes('bitcoin') || destChain.includes('bitcoin')) return '~30 min';
+      if (sourceChain.includes('solana') || destChain.includes('solana')) return '~5 min';
+      return '~15 min';
+    }
+    const seconds = bridgeQuote.estimatedTime;
+    if (seconds < 60) return `~${seconds}s`;
+    if (seconds < 3600) return `~${Math.ceil(seconds / 60)} min`;
+    return `~${(seconds / 3600).toFixed(1)}h`;
+  }, [bridgeQuote, sourceChain, destChain]);
+
+  // Cleanup tracking interval on unmount
+  useEffect(() => {
+    return () => {
+      if (trackingIntervalRef.current) {
+        clearInterval(trackingIntervalRef.current);
+      }
+    };
+  }, []);
 
   function swapChains() {
     const temp = sourceChain;
@@ -138,16 +171,53 @@ export function Bridge() {
     if (!newCommon.includes(token) && newCommon.length > 0) {
       setToken(newCommon[0]);
     }
-    setHasQuote(false);
+    setBridgeQuote(null);
+    setError(null);
   }
 
+  /**
+   * Fetch a real bridge quote from Li.Fi.
+   */
   async function getQuote() {
     if (!amount || Number(amount) <= 0) return;
+    if (!walletAddress) {
+      setError('Please connect your wallet first.');
+      return;
+    }
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200 + Math.random() * 600));
-    setHasQuote(true);
-    setBridgePhase('quote');
-    setLoading(false);
+    setBridgeQuote(null);
+    setError(null);
+
+    try {
+      const fromTokenAddr = getTokenAddress(evmChainId, token) || NATIVE_TOKEN_ADDRESS;
+      const toEvmChainId = destChain.includes('ethereum') ? 1
+        : destChain.includes('polygon') ? 137
+        : destChain.includes('arbitrum') ? 42161
+        : destChain.includes('base') ? 8453
+        : destChain.includes('optimism') ? 10 : 1;
+      const toTokenAddr = getTokenAddress(toEvmChainId, token) || NATIVE_TOKEN_ADDRESS;
+
+      const decimals = ['USDC', 'USDT'].includes(token) ? 6 : 18;
+      const amountInSmallestUnit = BigInt(Math.floor(parseFloat(amount) * 10 ** decimals)).toString();
+
+      const quote = await getBridgeQuote({
+        fromChainId: sourceChain,
+        toChainId: destChain,
+        fromToken: fromTokenAddr,
+        toToken: toTokenAddr,
+        amount: amountInSmallestUnit,
+        userAddress: walletAddress,
+        recipientAddress: recipientOverride || undefined,
+      });
+
+      setBridgeQuote(quote);
+      setBridgePhase('quote');
+    } catch (err: any) {
+      setError(err.message || 'Failed to get bridge quote. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleApprove() {
@@ -164,8 +234,15 @@ export function Bridge() {
     }
   }
 
+  /**
+   * Execute the bridge via Li.Fi + wagmi sendTransaction + status tracking.
+   */
   async function handleBridge() {
-    if (!hasQuote) return;
+    if (!bridgeQuote) return;
+    if (!walletAddress) {
+      setError('Please connect your wallet first.');
+      return;
+    }
 
     // If non-native and not yet approved, trigger approval first
     if (!isNativeToken && bridgePhase === 'quote') {
@@ -174,41 +251,103 @@ export function Bridge() {
     }
 
     setBridging(true);
-    const steps: BridgeStep[] = isNativeToken
-      ? ['sending', 'bridging', 'confirming']
-      : ['approving', 'sending', 'bridging', 'confirming'];
-    for (const step of steps) {
-      setBridgeStep(step);
-      const delay = step === 'bridging' ? 1500 : 800;
-      await new Promise((r) => setTimeout(r, delay + Math.random() * 500));
-    }
-    setBridgeStep('done');
-    const hash = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-    setTxHash(hash);
-    setBridging(false);
+    setError(null);
 
-    // Start tracking progress simulation
-    setBridgePhase('tracking');
-    setTrackingProgress(0);
-    const interval = setInterval(() => {
-      setTrackingProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + 5;
+    try {
+      // Step 1: Get executable bridge tx from Li.Fi
+      setBridgeStep('sending');
+
+      const fromTokenAddr = getTokenAddress(evmChainId, token) || NATIVE_TOKEN_ADDRESS;
+      const toEvmChainId = destChain.includes('ethereum') ? 1
+        : destChain.includes('polygon') ? 137
+        : destChain.includes('arbitrum') ? 42161
+        : destChain.includes('base') ? 8453
+        : destChain.includes('optimism') ? 10 : 1;
+      const toTokenAddr = getTokenAddress(toEvmChainId, token) || NATIVE_TOKEN_ADDRESS;
+      const decimals = ['USDC', 'USDT'].includes(token) ? 6 : 18;
+      const amountInSmallestUnit = BigInt(Math.floor(parseFloat(amount) * 10 ** decimals)).toString();
+
+      const bridgeResult = await executeBridge({
+        fromChainId: sourceChain,
+        toChainId: destChain,
+        fromToken: fromTokenAddr,
+        toToken: toTokenAddr,
+        amount: amountInSmallestUnit,
+        userAddress: walletAddress,
+        recipientAddress: recipientOverride || undefined,
       });
-    }, 800);
+
+      if (!bridgeResult.tx) {
+        throw new Error('Li.Fi did not return transaction data for this bridge route.');
+      }
+
+      // Step 2: Send the transaction via wagmi
+      setBridgeStep('bridging');
+
+      const txResult = await sendTransactionAsync({
+        to: bridgeResult.tx.to as `0x${string}`,
+        data: bridgeResult.tx.data as `0x${string}`,
+        value: BigInt(bridgeResult.tx.value || '0'),
+      });
+
+      setBridgeStep('confirming');
+      setTxHash(txResult);
+      setBridgeStep('done');
+      setBridging(false);
+
+      // Step 3: Start tracking bridge status via Li.Fi
+      setBridgePhase('tracking');
+      setTrackingProgress(10);
+      setTrackingStatus('Waiting for source chain confirmation...');
+
+      // Poll status in background
+      trackBridgeStatus(txResult, sourceChain, destChain, (statusUpdate) => {
+        if (statusUpdate.status === 'DONE') {
+          setTrackingProgress(100);
+          setTrackingStatus('Bridge completed successfully!');
+        } else if (statusUpdate.status === 'FAILED') {
+          setTrackingProgress(100);
+          setTrackingStatus('Bridge failed. Please check the explorer.');
+        } else if (statusUpdate.status === 'PENDING') {
+          setTrackingProgress((prev) => Math.min(prev + 10, 90));
+          setTrackingStatus(statusUpdate.substatus || 'Bridging in progress...');
+        } else if (statusUpdate.status === 'NOT_FOUND') {
+          setTrackingProgress((prev) => Math.min(prev + 5, 50));
+          setTrackingStatus('Waiting for bridge detection...');
+        }
+      }).catch(() => {
+        // If tracking fails, show a generic message
+        setTrackingStatus('Unable to track status. Check explorer for updates.');
+      });
+
+    } catch (err: any) {
+      const message = err.message || 'Bridge failed';
+      if (message.includes('rejected') || message.includes('denied')) {
+        setError('Transaction was rejected in wallet.');
+      } else if (message.includes('insufficient')) {
+        setError('Insufficient balance for this bridge.');
+      } else if (message.includes('timed out')) {
+        setError('Request timed out. Please try again.');
+      } else {
+        setError(message.length > 200 ? message.substring(0, 200) + '...' : message);
+      }
+      setBridging(false);
+    }
   }
 
   function resetForm() {
     setAmount('');
-    setHasQuote(false);
+    setBridgeQuote(null);
     setTxHash(null);
     setBridgeStep(null);
     setBridging(false);
     setBridgePhase('quote');
     setTrackingProgress(0);
+    setTrackingStatus('');
+    setError(null);
+    if (trackingIntervalRef.current) {
+      clearInterval(trackingIntervalRef.current);
+    }
   }
 
   return (
@@ -217,6 +356,20 @@ export function Bridge() {
 
       <main className="max-w-md md:max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-24 md:pb-8">
         <h1 className="text-xl md:text-2xl font-light tracking-wide mb-4 md:mb-6 text-white/90">Bridge</h1>
+
+        {/* Error Toast */}
+        {error && (
+          <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-light">
+            <div className="flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300 ml-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Success State */}
         {txHash ? (
@@ -245,16 +398,18 @@ export function Bridge() {
                     style={{ width: `${trackingProgress}%` }}
                   />
                 </div>
-                <p className="text-[10px] font-light text-white/25">Waiting for destination chain confirmation...</p>
+                <p className="text-[10px] font-light text-white/25">{trackingStatus || 'Waiting for destination chain confirmation...'}</p>
               </div>
             )}
 
             {trackingProgress >= 100 && (
-              <div className="text-xs font-light text-emerald-400 flex items-center justify-center gap-1">
+              <div className={`text-xs font-light flex items-center justify-center gap-1 ${
+                trackingStatus.includes('failed') ? 'text-red-400' : 'text-emerald-400'
+              }`}>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                 </svg>
-                Confirmed on destination chain
+                {trackingStatus || 'Confirmed on destination chain'}
               </div>
             )}
 
@@ -262,6 +417,21 @@ export function Bridge() {
               <p className="text-xs font-light text-white/30 mb-1">Transaction Hash</p>
               <p className="text-sm font-mono text-white/60 break-all">{txHash}</p>
             </div>
+
+            {/* Bridge route info from quote */}
+            {bridgeQuote && bridgeQuote.route.length > 0 && (
+              <div className="glass-card p-4">
+                <p className="text-xs font-light text-white/30 mb-2">Bridge Route</p>
+                <div className="flex flex-wrap gap-1 justify-center">
+                  {bridgeQuote.route.map((step, i) => (
+                    <span key={i} className="text-[10px] font-mono text-white/40 bg-white/5 px-2 py-0.5 rounded">
+                      {step.bridge}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button onClick={resetForm} className="btn-bevel w-full py-3">
               Bridge Again
             </button>
@@ -281,7 +451,8 @@ export function Bridge() {
                       const newTokens = BRIDGE_TOKENS[c.id] ?? [];
                       const newCommon = newTokens.filter((t) => (BRIDGE_TOKENS[destChain] ?? []).includes(t));
                       if (!newCommon.includes(token) && newCommon.length > 0) setToken(newCommon[0]);
-                      setHasQuote(false);
+                      setBridgeQuote(null);
+                      setError(null);
                     }}
                     disabled={c.id === destChain}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 ${
@@ -324,7 +495,8 @@ export function Bridge() {
                       const srcTokens = BRIDGE_TOKENS[sourceChain] ?? [];
                       const newCommon = srcTokens.filter((t) => newTokens.includes(t));
                       if (!newCommon.includes(token) && newCommon.length > 0) setToken(newCommon[0]);
-                      setHasQuote(false);
+                      setBridgeQuote(null);
+                      setError(null);
                     }}
                     disabled={c.id === sourceChain}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-300 ${
@@ -349,7 +521,7 @@ export function Bridge() {
                   {commonTokens.map((t) => (
                     <button
                       key={t}
-                      onClick={() => { setToken(t); setHasQuote(false); }}
+                      onClick={() => { setToken(t); setBridgeQuote(null); setError(null); }}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-300 ${
                         token === t
                           ? 'bg-white/10 text-white border-white/20'
@@ -371,7 +543,7 @@ export function Bridge() {
                   <input
                     type="number"
                     value={amount}
-                    onChange={(e) => { setAmount(e.target.value); setHasQuote(false); }}
+                    onChange={(e) => { setAmount(e.target.value); setBridgeQuote(null); setError(null); }}
                     placeholder="0.00"
                     min="0"
                     step="any"
@@ -418,11 +590,16 @@ export function Bridge() {
             </div>
 
             {/* Quote Display */}
-            {hasQuote && (
+            {bridgeQuote && (
               <div className="glass-card p-6 space-y-3 gradient-border">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-light tracking-wide text-white/80">Bridge Quote</h3>
-                  <div className="section-badge text-[10px]">{estimatedTime}</div>
+                  <h3 className="text-sm font-light tracking-wide text-white/80">Bridge Quote via {bridgeQuote.provider}</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      LIVE
+                    </span>
+                    <div className="section-badge text-[10px]">{estimatedTime}</div>
+                  </div>
                 </div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
@@ -431,11 +608,11 @@ export function Bridge() {
                   </div>
                   <div className="flex justify-between">
                     <span className="font-light text-white/30">You receive</span>
-                    <span className="text-white/70 font-mono">{outputAmount} {token} on {destChainInfo.name}</span>
+                    <span className="text-white/70 font-mono">{formatOutputAmount()} {token} on {destChainInfo.name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-light text-white/30">Bridge fee</span>
-                    <span className="text-white/50">1.0%</span>
+                    <span className="text-white/50">${bridgeQuote.bridgeFee}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-light text-white/30">Privacy</span>
@@ -446,6 +623,29 @@ export function Bridge() {
                     </span>
                   </div>
                 </div>
+
+                {/* Route info */}
+                {bridgeQuote.route.length > 0 && (
+                  <div className="pt-2 border-t border-white/5">
+                    <p className="text-[10px] font-light text-white/25 mb-1">Route</p>
+                    <div className="flex flex-wrap gap-1">
+                      {bridgeQuote.route.map((step, i) => (
+                        <span key={i} className="text-[10px] font-mono text-white/40 bg-white/5 px-2 py-0.5 rounded">
+                          {step.bridge}: {step.token}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Refresh Quote */}
+                <button
+                  onClick={getQuote}
+                  disabled={loading}
+                  className="w-full text-xs font-light text-white/30 hover:text-white/60 tracking-wide transition-colors py-1"
+                >
+                  {loading ? 'Refreshing...' : 'Refresh Quote'}
+                </button>
               </div>
             )}
 
@@ -482,7 +682,7 @@ export function Bridge() {
             )}
 
             {/* Action Buttons */}
-            {!hasQuote ? (
+            {!bridgeQuote ? (
               <button
                 onClick={getQuote}
                 disabled={!amount || Number(amount) <= 0 || loading || commonTokens.length === 0}
@@ -498,7 +698,7 @@ export function Bridge() {
                       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
                       <path d="M4 12a8 8 0 0 1 8-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75" />
                     </svg>
-                    Getting quote...
+                    Getting Li.Fi quote...
                   </span>
                 ) : 'Get Bridge Quote'}
               </button>

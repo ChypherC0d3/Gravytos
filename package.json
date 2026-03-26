@@ -9,10 +9,13 @@
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace=@gravytos/web",
-    "dev:desktop": "npm run dev --workspace=@gravytos/desktop",
+    "dev:desktop": "cd apps/desktop && npm run tauri dev",
     "build": "npm run build --workspaces --if-present",
     "build:web": "cd apps/web && npx vite build",
-    "build:desktop": "npm run build --workspace=@gravytos/desktop",
+    "build:desktop": "cd apps/desktop && npm run tauri build",
+    "build:desktop:win": "cd apps/desktop && npm run tauri build -- --target x86_64-pc-windows-msvc",
+    "build:desktop:mac": "cd apps/desktop && npm run tauri build -- --target universal-apple-darwin",
+    "build:desktop:linux": "cd apps/desktop && npm run tauri build -- --target x86_64-unknown-linux-gnu",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules"

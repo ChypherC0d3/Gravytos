@@ -13,9 +13,11 @@
     "withGlobalTauri": false,
     "windows": [
       {
-        "title": "Gravytos",
-        "width": 1280,
+        "title": "Gravytos — Privacy Wallet",
+        "width": 1200,
         "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
         "resizable": true,
         "decorations": true,
         "fullscreen": false
@@ -27,13 +29,16 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ]
+    "targets": ["msi", "dmg", "appimage"],
+    "icon": ["icons/icon.png"],
+    "identifier": "com.gravytos.app",
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "12.0"
+    }
   }
 }
