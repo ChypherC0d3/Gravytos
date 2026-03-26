@@ -521,7 +521,7 @@ describe('PRIVACY: RPC Rotation', () => {
   it('rotates through RPCs round-robin', () => {
     const r1 = evmPrivacy.getNextRPC('chain-1', rpcs);
     const r2 = evmPrivacy.getNextRPC('chain-1', rpcs);
-    const r3 = evmPrivacy.getNextRPC('chain-1', rpcs);
+    evmPrivacy.getNextRPC('chain-1', rpcs); // advance rotation
     const r4 = evmPrivacy.getNextRPC('chain-1', rpcs);
 
     // Should cycle: rpc1 → rpc2 → rpc3 → rpc1
@@ -704,12 +704,12 @@ describe('AUDIT: Event Logging & Hash Chain', () => {
     const engine = new AuditEngine(storage);
 
     const e1 = await engine.logEvent({
-      timestamp: Date.now(), actionType: AuditActionType.WalletCreated,
+      actionType: AuditActionType.WalletCreated,
       walletId: 'w1', chainId: 'btc', privacyLevel: PrivacyLevel.Low,
       details: { name: 'Test' },
     });
     const e2 = await engine.logEvent({
-      timestamp: Date.now(), actionType: AuditActionType.TransactionSent,
+      actionType: AuditActionType.TransactionSent,
       walletId: 'w1', chainId: 'eth', txHash: '0xabc', privacyLevel: PrivacyLevel.Medium,
       details: { to: '0x123', value: '1.0' },
     });
@@ -727,7 +727,7 @@ describe('AUDIT: Event Logging & Hash Chain', () => {
 
     for (let i = 0; i < 5; i++) {
       await engine.logEvent({
-        timestamp: Date.now() + i, actionType: AuditActionType.TransactionSent,
+        actionType: AuditActionType.TransactionSent,
         walletId: 'w1', chainId: 'eth', privacyLevel: PrivacyLevel.Low,
         details: { index: i },
       });
@@ -742,9 +742,9 @@ describe('AUDIT: Event Logging & Hash Chain', () => {
     const storage = new InMemoryAuditStorage();
     const engine = new AuditEngine(storage);
 
-    await engine.logEvent({ timestamp: 1, actionType: AuditActionType.WalletCreated, walletId: 'w1', chainId: 'btc', privacyLevel: PrivacyLevel.Low, details: { ok: true } });
-    await engine.logEvent({ timestamp: 2, actionType: AuditActionType.TransactionSent, walletId: 'w1', chainId: 'eth', privacyLevel: PrivacyLevel.Low, details: { amount: '1.0' } });
-    await engine.logEvent({ timestamp: 3, actionType: AuditActionType.SwapExecuted, walletId: 'w1', chainId: 'eth', privacyLevel: PrivacyLevel.Low, details: { from: 'ETH', to: 'USDC' } });
+    await engine.logEvent({ actionType: AuditActionType.WalletCreated, walletId: 'w1', chainId: 'btc', privacyLevel: PrivacyLevel.Low, details: { ok: true } });
+    await engine.logEvent({ actionType: AuditActionType.TransactionSent, walletId: 'w1', chainId: 'eth', privacyLevel: PrivacyLevel.Low, details: { amount: '1.0' } });
+    await engine.logEvent({ actionType: AuditActionType.SwapExecuted, walletId: 'w1', chainId: 'eth', privacyLevel: PrivacyLevel.Low, details: { from: 'ETH', to: 'USDC' } });
 
     // Tamper with event 1
     const events = await storage.getAll();
@@ -759,8 +759,8 @@ describe('AUDIT: Event Logging & Hash Chain', () => {
     const storage = new InMemoryAuditStorage();
     const engine = new AuditEngine(storage);
 
-    await engine.logEvent({ timestamp: Date.now(), actionType: AuditActionType.WalletCreated, walletId: 'w1', chainId: 'btc', privacyLevel: PrivacyLevel.Low, details: {} });
-    await engine.logEvent({ timestamp: Date.now(), actionType: AuditActionType.TransactionSent, walletId: 'w1', chainId: 'eth', privacyLevel: PrivacyLevel.Medium, details: {} });
+    await engine.logEvent({ actionType: AuditActionType.WalletCreated, walletId: 'w1', chainId: 'btc', privacyLevel: PrivacyLevel.Low, details: {} });
+    await engine.logEvent({ actionType: AuditActionType.TransactionSent, walletId: 'w1', chainId: 'eth', privacyLevel: PrivacyLevel.Medium, details: {} });
 
     const exported = await engine.export();
     expect(exported.application).toBe('gravytos');
@@ -773,9 +773,9 @@ describe('AUDIT: Event Logging & Hash Chain', () => {
     const storage = new InMemoryAuditStorage();
     const engine = new AuditEngine(storage);
 
-    await engine.logEvent({ timestamp: 1, actionType: AuditActionType.WalletCreated, walletId: 'w1', chainId: 'btc', privacyLevel: PrivacyLevel.Low, details: {} });
-    await engine.logEvent({ timestamp: 2, actionType: AuditActionType.WalletCreated, walletId: 'w2', chainId: 'eth', privacyLevel: PrivacyLevel.Low, details: {} });
-    await engine.logEvent({ timestamp: 3, actionType: AuditActionType.TransactionSent, walletId: 'w1', chainId: 'btc', privacyLevel: PrivacyLevel.Low, details: {} });
+    await engine.logEvent({ actionType: AuditActionType.WalletCreated, walletId: 'w1', chainId: 'btc', privacyLevel: PrivacyLevel.Low, details: {} });
+    await engine.logEvent({ actionType: AuditActionType.WalletCreated, walletId: 'w2', chainId: 'eth', privacyLevel: PrivacyLevel.Low, details: {} });
+    await engine.logEvent({ actionType: AuditActionType.TransactionSent, walletId: 'w1', chainId: 'btc', privacyLevel: PrivacyLevel.Low, details: {} });
 
     const exported = await engine.export({ walletIds: ['w1'] });
     expect(exported.totalEvents).toBe(2);
@@ -818,7 +818,6 @@ describe('E2E: Full Transaction Flow Simulation', () => {
     const auditEngine = new AuditEngine(auditStorage);
 
     await auditEngine.logEvent({
-      timestamp: Date.now(),
       actionType: AuditActionType.WalletCreated,
       walletId: 'wallet-e2e',
       chainId: 'multi',
