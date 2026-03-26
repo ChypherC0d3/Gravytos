@@ -18,15 +18,12 @@ jobs:
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             artifact: gravytos-windows
-            bundle_ext: msi
           - platform: macos-latest
             target: aarch64-apple-darwin
             artifact: gravytos-macos
-            bundle_ext: dmg
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             artifact: gravytos-linux
-            bundle_ext: appimage
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -42,6 +39,11 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -50,26 +52,32 @@ jobs:
 
       - name: Install Node dependencies
         run: npm install
-        working-directory: .
+
+      - name: Build frontend first
+        run: npx vite build
+        working-directory: apps/desktop
 
       - name: Install Tauri CLI
-        run: npm install -g @tauri-apps/cli@latest
+        run: cargo install tauri-cli --version "^2.0"
 
-      - name: Build desktop app
-        run: tauri build --target ${{ matrix.target }}
+      - name: Build Tauri (skip frontend — already built)
+        run: cargo tauri build --target ${{ matrix.target }} --no-bundle || cargo tauri build --target ${{ matrix.target }}
         working-directory: apps/desktop
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
+          TAURI_SKIP_DEVSERVER_CHECK: "true"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: |
-            apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.${{ matrix.bundle_ext }}
             apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
             apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
             apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            apps/desktop/src-tauri/target/release/bundle/**/*.msi
+            apps/desktop/src-tauri/target/release/bundle/**/*.dmg
+            apps/desktop/src-tauri/target/release/bundle/**/*.AppImage
           if-no-files-found: warn
 
   release:
@@ -79,9 +87,6 @@ jobs:
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
-
-      - name: List artifacts
-        run: find . -type f \( -name "*.msi" -o -name "*.dmg" -o -name "*.AppImage" \) | head -20
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2

@@ -2,12 +2,12 @@
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
   "productName": "Gravytos",
   "version": "0.1.0",
-  "identifier": "com.gravytos.app",
+  "identifier": "com.gravytos.wallet",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5174",
-    "beforeDevCommand": "cd .. && npx vite --port 5174",
-    "beforeBuildCommand": "cd .. && npx vite build"
+    "beforeDevCommand": "npx vite --port 5174",
+    "beforeBuildCommand": ""
   },
   "app": {
     "withGlobalTauri": false,
