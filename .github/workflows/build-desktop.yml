@@ -57,15 +57,18 @@ jobs:
         run: npx vite build
         working-directory: apps/desktop
 
+      - name: Verify dist exists
+        run: ls -la dist/
+        working-directory: apps/desktop
+
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0"
 
-      - name: Build Tauri (skip frontend — already built)
-        run: cargo tauri build --target ${{ matrix.target }} --no-bundle || cargo tauri build --target ${{ matrix.target }}
+      - name: Build Tauri
+        run: cargo tauri build --target ${{ matrix.target }}
         working-directory: apps/desktop
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
-          TAURI_SKIP_DEVSERVER_CHECK: "true"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
