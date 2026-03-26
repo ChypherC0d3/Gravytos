@@ -185,7 +185,12 @@ export function Download() {
                 <p className="text-sm font-light text-white/40 mb-1">{os.requirement}</p>
                 <p className="text-xs font-light text-white/25 mb-6">{os.arch}</p>
 
-                <button className={`w-full py-3.5 rounded-xl bg-gradient-to-r ${os.gradient} text-white font-medium text-sm tracking-wide hover:opacity-90 hover:shadow-lg transition-all duration-300 cursor-pointer`}>
+                <button
+                  onClick={() => {
+                    const releaseUrl = `https://github.com/ChypherC0d3/Gravytos/releases/latest/download/${os.file}`;
+                    window.open(releaseUrl, '_blank');
+                  }}
+                  className={`w-full py-3.5 rounded-xl bg-gradient-to-r ${os.gradient} text-white font-medium text-sm tracking-wide hover:opacity-90 hover:shadow-lg transition-all duration-300 cursor-pointer`}>
                   Download for {os.name}
                 </button>
 
@@ -270,7 +275,7 @@ export function Download() {
                   {os.verifyCmd}
                 </code>
                 <button
-                  onClick={() => navigator.clipboard.writeText(os.verifyCmd)}
+                  onClick={async () => { const { copyToClipboard } = await import('../utils/clipboard'); copyToClipboard(os.verifyCmd); }}
                   className="shrink-0 p-1.5 rounded-md hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors cursor-pointer"
                   title="Copy command"
                 >

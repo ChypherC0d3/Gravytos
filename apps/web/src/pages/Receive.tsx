@@ -88,8 +88,9 @@ export function Receive() {
   const currentAddress = addresses[addressIndex] ?? 'No address available';
   const isBitcoin = selectedChain.family === 'bitcoin';
 
-  function handleCopy() {
-    navigator.clipboard.writeText(currentAddress).catch(() => {});
+  async function handleCopy() {
+    const { copyToClipboard } = await import('../utils/clipboard');
+    await copyToClipboard(currentAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

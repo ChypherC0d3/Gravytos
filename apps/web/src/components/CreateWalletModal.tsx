@@ -85,13 +85,10 @@ export function CreateWalletModal({ isOpen, onClose, onCreated }: CreateWalletMo
   }, [name, password, confirmPassword, createWallet, deriveAddresses]);
 
   const handleCopyMnemonic = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(mnemonic);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // fallback: select text
-    }
+    const { copyToClipboard } = await import('../utils/clipboard');
+    await copyToClipboard(mnemonic);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [mnemonic]);
 
   const verifyAllCorrect = useMemo(() => {
@@ -356,13 +353,10 @@ function AddressRow({ label, prefix, address, color, bgColor }: { label: string;
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(address);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // ignore
-    }
+    const { copyToClipboard } = await import('../utils/clipboard');
+    await copyToClipboard(address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const truncated = address.length > 20
