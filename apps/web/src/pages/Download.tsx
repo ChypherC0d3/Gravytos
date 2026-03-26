@@ -74,8 +74,9 @@ const OS_CARDS = [
     icon: WindowsIcon,
     requirement: 'Windows 10 or later',
     arch: 'x64 \u00B7 .msi installer',
-    file: 'gravytos-0.1.0-x64.msi',
-    verifyCmd: 'certutil -hashfile gravytos-0.1.0-x64.msi SHA256',
+    file: 'Gravytos_0.1.0_x64_en-US.msi',
+    sha256: '36b519bcc832b26c9be5c512b05abc44552941fb344bc75e1885a5297e405f90',
+    verifyCmd: 'certutil -hashfile Gravytos_0.1.0_x64_en-US.msi SHA256',
     gradient: 'from-blue-600 to-cyan-600',
     hoverBorder: 'hover:border-blue-500/50',
     shadowColor: 'hover:shadow-blue-500/10',
@@ -84,9 +85,10 @@ const OS_CARDS = [
     name: 'macOS',
     icon: AppleIcon,
     requirement: 'macOS 12 Monterey or later',
-    arch: 'Universal (Intel + Apple Silicon) \u00B7 .dmg',
-    file: 'gravytos-0.1.0-universal.dmg',
-    verifyCmd: 'shasum -a 256 gravytos-0.1.0-universal.dmg',
+    arch: 'Apple Silicon (aarch64) \u00B7 .dmg',
+    file: 'Gravytos_0.1.0_aarch64.dmg',
+    sha256: '1e44674777794ffa46a8103a903778bb2778bf1de918b3c294290c9948945514',
+    verifyCmd: 'shasum -a 256 Gravytos_0.1.0_aarch64.dmg',
     gradient: 'from-gray-500 to-gray-600',
     hoverBorder: 'hover:border-gray-400/50',
     shadowColor: 'hover:shadow-gray-400/10',
@@ -96,8 +98,9 @@ const OS_CARDS = [
     icon: LinuxIcon,
     requirement: 'Ubuntu 20.04+ / Fedora 36+',
     arch: 'x64 \u00B7 .AppImage',
-    file: 'gravytos-0.1.0-x86_64.AppImage',
-    verifyCmd: 'sha256sum gravytos-0.1.0-x86_64.AppImage',
+    file: 'Gravytos_0.1.0_amd64.AppImage',
+    sha256: '5368e3fa452e0783533711c34736b21872332c9361b9351ae2b71b04927b3347',
+    verifyCmd: 'sha256sum Gravytos_0.1.0_amd64.AppImage',
     gradient: 'from-yellow-600 to-orange-600',
     hoverBorder: 'hover:border-yellow-500/50',
     shadowColor: 'hover:shadow-yellow-500/10',
@@ -195,7 +198,7 @@ export function Download() {
                 </button>
 
                 <p className="text-[11px] font-light text-white/20 mt-4 font-mono">
-                  SHA256: Coming soon
+                  SHA256: {os.sha256.substring(0, 16)}...
                 </p>
               </div>
             );
