@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Bitcoin Chain Adapter
+// GRAVYTOS -- Bitcoin Chain Adapter
 // Full ChainAdapter implementation for the Bitcoin UTXO chain
 // ===================================================================
 

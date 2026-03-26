@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Audit Types
+// GRAVYTOS — Audit Types
 // Event sourcing with hash chaining for verifiable audit trail
 // Optional auditability / user-controlled transparency
 // ═══════════════════════════════════════════════════════════════

@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Bitcoin RPC Client
+// GRAVYTOS -- Bitcoin RPC Client
 // Blockstream / Mempool.space REST API client for Bitcoin
 // ===================================================================
 

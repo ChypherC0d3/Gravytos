@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- EVM Privacy Engine
+// GRAVYTOS -- EVM Privacy Engine
 // Stealth addresses (ERC-5564 compatible), RPC rotation, gas randomization
 // ===================================================================
 

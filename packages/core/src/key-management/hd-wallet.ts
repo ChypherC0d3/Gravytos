@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- HD Wallet (BIP39 / BIP44 / BIP84)
+// GRAVYTOS -- HD Wallet (BIP39 / BIP44 / BIP84)
 // Real key derivation for Bitcoin, Ethereum, and Solana
 // ===================================================================
 
@@ -15,7 +15,9 @@ import { ripemd160 } from '@noble/hashes/legacy.js';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { bech32, base58 } from '@scure/base';
-import { derivePath, getPublicKey } from 'ed25519-hd-key';
+import { hmac } from '@noble/hashes/hmac.js';
+import { sha512 } from '@noble/hashes/sha2.js';
+import { ed25519 } from '@noble/curves/ed25519.js';
 
 import type { DerivedKey } from '@gravytos/types';
 import { ChainFamily } from '@gravytos/types';
@@ -216,7 +218,39 @@ function bigIntToBytes(value: bigint, length: number): Uint8Array {
   return result;
 }
 
-// ── Solana (BIP44 with ed25519-hd-key) ──────────────────────────
+// ── Solana (SLIP-0010 ed25519 derivation — browser-compatible) ───
+
+/**
+ * SLIP-0010 ed25519 master key derivation from seed.
+ */
+function slip10DeriveChild(
+  parentKey: Uint8Array,
+  parentChainCode: Uint8Array,
+  index: number,
+): { key: Uint8Array; chainCode: Uint8Array } {
+  const data = new Uint8Array(1 + 32 + 4);
+  data[0] = 0x00;
+  data.set(parentKey, 1);
+  const view = new DataView(data.buffer);
+  view.setUint32(33, (index | 0x80000000) >>> 0, false);
+  const I = hmac(sha512, parentChainCode, data);
+  return { key: I.slice(0, 32), chainCode: I.slice(32) };
+}
+
+function slip10DerivePath(seed: Uint8Array, path: string): Uint8Array {
+  const I = hmac(sha512, new TextEncoder().encode('ed25519 seed'), seed);
+  let key = I.slice(0, 32);
+  let chainCode = I.slice(32);
+
+  const segments = path.replace("m/", "").split("/");
+  for (const seg of segments) {
+    const index = parseInt(seg.replace("'", ""), 10);
+    const result = slip10DeriveChild(key, chainCode, index);
+    key = new Uint8Array(result.key);
+    chainCode = new Uint8Array(result.chainCode);
+  }
+  return key;
+}
 
 /**
  * Derive a BIP44 Solana key.
@@ -227,15 +261,9 @@ export function deriveSolanaKey(
   accountIndex: number,
 ): DerivedKey {
   const path = `m/44'/501'/${accountIndex}'/0'`;
-  const seedHex = bytesToHex(seed);
-  const { key } = derivePath(path, seedHex);
+  const privateKeyBytes = slip10DerivePath(seed, path.replace('m/', ''));
 
-  // ed25519-hd-key returns a Buffer; convert to Uint8Array
-  const privateKeyBytes = new Uint8Array(key);
-
-  // Get the ed25519 public key (32 bytes, no zero-byte prefix)
-  const pubKeyBuffer = getPublicKey(key, false);
-  const publicKey = new Uint8Array(pubKeyBuffer);
+  const publicKey = ed25519.getPublicKey(privateKeyBytes);
 
   // Solana keypair is 64 bytes: privateKey (32) + publicKey (32)
   const keypair = new Uint8Array(64);

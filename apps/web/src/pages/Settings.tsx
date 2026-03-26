@@ -15,7 +15,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 function Navbar() {
   return (
     <header className="border-b border-white/5 bg-[hsl(220,30%,6%)]/80 backdrop-blur-xl sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <Link to="/dashboard" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-lg shadow-purple-500/20">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -180,20 +180,20 @@ export function Settings() {
     <div className="min-h-screen dark">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-light tracking-wide mb-6 text-white/90">Settings</h1>
+      <main className="max-w-2xl lg:max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-24 md:pb-8">
+        <h1 className="text-xl md:text-2xl font-light tracking-wide mb-4 md:mb-6 text-white/90">Settings</h1>
 
-        <div className="grid lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
           {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
-            <nav className="space-y-1">
+            <nav className="flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
               {sections.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => setActiveSection(s.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-light tracking-wide transition-all duration-300 ${
+                  className={`whitespace-nowrap lg:w-full flex items-center gap-2 lg:gap-3 px-3 py-2.5 rounded-lg text-sm font-light tracking-wide transition-all duration-300 ${
                     activeSection === s.id
-                      ? 'bg-white/10 text-white border-l-2 border-l-purple-500 shadow-lg shadow-purple-500/5'
+                      ? 'bg-white/10 text-white lg:border-l-2 lg:border-l-purple-500 shadow-lg shadow-purple-500/5'
                       : 'text-white/40 hover:text-white/70 hover:bg-white/5'
                   }`}
                 >
@@ -613,10 +613,8 @@ export function Settings() {
                     <span className="text-sm text-white/70">MIT</span>
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-lg glass-card">
-                    <span className="text-sm font-light text-white/40 tracking-wide">Repository</span>
-                    <a href="https://github.com/gravytos" target="_blank" rel="noopener noreferrer" className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
-                      github.com/gravytos
-                    </a>
+                    <span className="text-sm font-light text-white/40 tracking-wide">Website</span>
+                    <span className="text-sm text-purple-400">gravytos.com</span>
                   </div>
                 </div>
                 <p className="text-xs font-light text-white/30 mt-4 tracking-wide leading-relaxed">

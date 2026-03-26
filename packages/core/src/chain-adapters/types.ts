@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Chain Adapter Interface
+// GRAVYTOS -- Chain Adapter Interface
 // Abstract interface that each chain family must implement
 // ===================================================================
 

@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- DeFi Contract Addresses
+// GRAVYTOS -- DeFi Contract Addresses
 // Aave V3 and other protocol addresses per chain
 // ===================================================================
 

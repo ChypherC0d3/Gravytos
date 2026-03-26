@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Audit Engine
+// GRAVYTOS -- Audit Engine
 // Hash-chained event log with cryptographic integrity verification
 // ===================================================================
 

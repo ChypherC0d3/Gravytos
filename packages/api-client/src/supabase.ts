@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Supabase Client
+// GRAVYTOS — Supabase Client
 // Shared Supabase instance and wallet-authenticated client
 // ═══════════════════════════════════════════════════════════════
 

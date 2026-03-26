@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Solana Privacy Engine
+// GRAVYTOS -- Solana Privacy Engine
 // Wallet rotation, priority fee randomization, transaction bundling
 // ===================================================================
 

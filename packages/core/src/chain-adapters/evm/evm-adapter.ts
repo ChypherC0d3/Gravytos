@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- EVM Chain Adapter
+// GRAVYTOS -- EVM Chain Adapter
 // Supports Ethereum, Polygon, Arbitrum, Base, and Optimism
 // ===================================================================
 

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Analytics
+// GRAVYTOS — Analytics
 // Lightweight event tracking via Google Analytics (gtag)
 // ═══════════════════════════════════════════════════════════════
 

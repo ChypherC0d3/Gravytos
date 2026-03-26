@@ -86,7 +86,7 @@ export function Landing() {
     <div className="min-h-screen dark" ref={scrollRef}>
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[hsl(220,30%,6%)]/80 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-lg shadow-purple-500/20">
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -96,9 +96,9 @@ export function Landing() {
             <span className="text-lg font-light tracking-wide text-white">Gravytos</span>
           </div>
           <div className="flex items-center gap-4">
-            <a href="https://github.com/gravytos" target="_blank" rel="noopener noreferrer" className="text-sm font-light text-white/50 hover:text-white/80 transition-colors duration-300 tracking-wide hidden sm:block">
-              GitHub
-            </a>
+            <Link to="/download" className="text-sm font-light text-white/50 hover:text-white/80 transition-colors duration-300 tracking-wide hidden sm:block">
+              Download
+            </Link>
             <Link to="/dashboard" className="btn-bevel text-sm py-2 px-5">
               Launch App
             </Link>
@@ -107,9 +107,9 @@ export function Landing() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-36 pb-24 px-6 overflow-hidden">
+      <section className="relative pt-24 md:pt-36 pb-16 md:pb-24 px-4 md:px-6 overflow-hidden">
         {/* Animated gradient orbs */}
-        <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute inset-0 -z-10 overflow-hidden hidden md:block">
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full opacity-20 animate-float" style={{ background: 'radial-gradient(circle, hsla(270, 60%, 55%, 0.4) 0%, transparent 70%)' }} />
           <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] rounded-full opacity-15" style={{ background: 'radial-gradient(circle, hsla(221, 60%, 55%, 0.4) 0%, transparent 70%)', animationDelay: '2s', animation: 'float 8s ease-in-out infinite' }} />
           <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full opacity-15" style={{ background: 'radial-gradient(circle, hsla(165, 60%, 45%, 0.3) 0%, transparent 70%)', animationDelay: '4s', animation: 'float 10s ease-in-out infinite' }} />
@@ -121,39 +121,37 @@ export function Landing() {
             Now supporting Bitcoin, Ethereum & Solana
           </div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-light tracking-wide mb-8 animate-slide-up">
+          <h1 className="text-3xl md:text-5xl lg:text-7xl font-light tracking-wide mb-6 md:mb-8 animate-slide-up">
             <span className="text-gradient">Privacy by design.</span>
             <br />
             <span className="text-white/90 font-extralight">Auditability on demand.</span>
           </h1>
 
-          <p className="text-lg md:text-xl font-light tracking-wide text-white/40 max-w-2xl mx-auto mb-12 leading-relaxed animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <p className="text-base md:text-lg lg:text-xl font-light tracking-wide text-white/40 max-w-2xl mx-auto mb-8 md:mb-12 leading-relaxed animate-slide-up" style={{ animationDelay: '0.1s' }}>
             The multi-chain wallet that puts you in control. Slide between
             speed and privacy per transaction. Prove what you choose, hide
             what you don&apos;t.
           </p>
 
-          <div className="flex items-center justify-center gap-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <Link to="/dashboard" className="btn-bevel py-3.5 px-10 text-base">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <Link to="/dashboard" className="btn-bevel py-3.5 px-10 text-base w-full sm:w-auto text-center min-h-12">
               Open Vault
             </Link>
-            <a
-              href="https://github.com/gravytos"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-bevel-outline py-3.5 px-10 text-base"
+            <Link
+              to="/download"
+              className="btn-bevel-outline py-3.5 px-10 text-base w-full sm:w-auto text-center min-h-12"
             >
-              View Source
-            </a>
+              Download App
+            </Link>
           </div>
         </div>
       </section>
 
       {/* Chain Logos Row */}
-      <section className="py-12 px-6 border-y border-white/5">
+      <section className="py-8 md:py-12 px-4 md:px-6 border-y border-white/5">
         <div className="max-w-4xl mx-auto">
           <p className="text-center text-xs font-light tracking-widest text-white/30 uppercase mb-8">Supported Networks</p>
-          <div className="flex items-center justify-center gap-8 md:gap-12 flex-wrap">
+          <div className="flex items-center justify-center gap-4 md:gap-8 lg:gap-12 flex-wrap">
             {CHAINS.map((chain) => (
               <div key={chain.abbr} className="flex items-center gap-2 opacity-40 hover:opacity-80 transition-opacity duration-300">
                 <span className={`text-sm font-semibold ${chain.color}`}>{chain.abbr}</span>
@@ -165,12 +163,12 @@ export function Landing() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 px-6 scroll-reveal">
+      <section className="py-12 md:py-20 px-4 md:px-6 scroll-reveal">
         <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
             {STATS.map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className="text-4xl md:text-5xl font-light text-gradient glow-text mb-2">{stat.value}</div>
+                <div className="text-3xl md:text-4xl lg:text-5xl font-light text-gradient glow-text mb-2">{stat.value}</div>
                 <div className="text-sm font-light tracking-wide text-white/40">{stat.label}</div>
               </div>
             ))}
@@ -179,9 +177,9 @@ export function Landing() {
       </section>
 
       {/* Features */}
-      <section className="py-20 px-6">
+      <section className="py-12 md:py-20 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16 scroll-reveal">
+          <div className="text-center mb-10 md:mb-16 scroll-reveal">
             <div className="section-badge mb-4">Features</div>
             <h2 className="section-title mb-4">
               Built for the <span className="text-gradient">privacy-conscious</span>
@@ -192,11 +190,11 @@ export function Landing() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {FEATURES.map((feature, i) => (
               <div
                 key={feature.title}
-                className="scroll-reveal glass-card p-8 group hover:border-purple-500/20 transition-all duration-500"
+                className="scroll-reveal glass-card p-5 md:p-8 group hover:border-purple-500/20 transition-all duration-500"
                 style={{ transitionDelay: `${i * 0.1}s` }}
               >
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/10 group-hover:border-purple-500/30 group-hover:shadow-lg group-hover:shadow-purple-500/10 flex items-center justify-center text-white/40 group-hover:text-purple-400 transition-all duration-500 mb-5">
@@ -213,13 +211,13 @@ export function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-6 scroll-reveal">
-        <div className="max-w-3xl mx-auto text-center glass-card p-16 relative overflow-hidden">
+      <section className="py-12 md:py-20 px-4 md:px-6 scroll-reveal">
+        <div className="max-w-3xl mx-auto text-center glass-card p-8 md:p-16 relative overflow-hidden">
           {/* Decorative gradient */}
           <div className="absolute inset-0 opacity-5 gradient-hero" />
           <div className="relative z-10">
             <div className="section-badge mb-4">Get Started</div>
-            <h2 className="text-3xl md:text-4xl font-light tracking-wide mb-4 text-white/90">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-light tracking-wide mb-4 text-white/90">
               Ready to take control?
             </h2>
             <p className="font-light text-white/40 mb-10 tracking-wide">
@@ -234,7 +232,7 @@ export function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-12 px-6">
+      <footer className="border-t border-white/5 py-8 md:py-12 px-4 md:px-6 pb-20 md:pb-12">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
@@ -246,9 +244,8 @@ export function Landing() {
               <span className="text-sm font-light tracking-wide text-white/50">Gravytos v0.1.0</span>
             </div>
             <nav className="flex items-center gap-6">
-              <a href="https://github.com/gravytos" target="_blank" rel="noopener noreferrer" className="text-xs font-light text-white/30 hover:text-white/60 transition-colors tracking-wide">GitHub</a>
+              <Link to="/download" className="text-xs font-light text-white/30 hover:text-white/60 transition-colors tracking-wide">Download</Link>
               <Link to="/dashboard" className="text-xs font-light text-white/30 hover:text-white/60 transition-colors tracking-wide">Dashboard</Link>
-              <span className="text-xs font-light text-white/30 tracking-wide">MIT License</span>
             </nav>
             <p className="text-xs font-light text-white/20 tracking-wide">Privacy is not a feature. It&apos;s a right.</p>
           </div>

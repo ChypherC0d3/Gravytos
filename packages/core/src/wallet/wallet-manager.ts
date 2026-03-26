@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Wallet Manager
+// GRAVYTOS -- Wallet Manager
 // Complete wallet lifecycle: create, import, lock/unlock, derive
 // ===================================================================
 

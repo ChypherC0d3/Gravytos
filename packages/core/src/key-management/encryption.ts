@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Seed Encryption (AES-256-GCM + PBKDF2)
+// GRAVYTOS -- Seed Encryption (AES-256-GCM + PBKDF2)
 // Uses the Web Crypto API for all cryptographic operations
 // ===================================================================
 

@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- CoinJoin Module Barrel Exports
+// GRAVYTOS -- CoinJoin Module Barrel Exports
 // ===================================================================
 
 export {

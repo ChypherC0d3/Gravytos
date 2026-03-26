@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- CoinJoin Participant Client
+// GRAVYTOS -- CoinJoin Participant Client
 //
 // Handles the participant side of CoinJoin protocol:
 // - Finding suitable UTXOs for mixing

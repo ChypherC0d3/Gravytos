@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Privacy Engine
+// GRAVYTOS -- Privacy Engine
 // Core privacy enhancement logic delegating to chain-specific engines
 // ===================================================================
 

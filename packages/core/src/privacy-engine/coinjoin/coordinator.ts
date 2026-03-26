@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- CoinJoin Coordinator
+// GRAVYTOS -- CoinJoin Coordinator
 //
 // This implements a local coordinator for CoinJoin transactions.
 // In production, this would be a server or P2P network.

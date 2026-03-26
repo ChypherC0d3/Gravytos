@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Network Manager
+// GRAVYTOS -- Network Manager
 // RPC pool management with rotation, health tracking, and failover
 // ===================================================================
 

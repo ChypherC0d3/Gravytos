@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- useWalletManager Hook
+// GRAVYTOS -- useWalletManager Hook
 // Wraps WalletManager for React with mnemonic generation & derivation
 // ===================================================================
 

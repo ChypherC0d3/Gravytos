@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- IndexedDB Audit Storage
+// GRAVYTOS -- IndexedDB Audit Storage
 // Persistent, browser-based storage for the audit event chain
 // ===================================================================
 

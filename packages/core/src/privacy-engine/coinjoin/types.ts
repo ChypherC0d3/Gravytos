@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- CoinJoin Coordination Protocol Types
+// GRAVYTOS -- CoinJoin Coordination Protocol Types
 //
 // Inspired by WabiSabi (Wasabi Wallet) but adapted for:
 // - Non-custodial operation (coordinator never holds funds)

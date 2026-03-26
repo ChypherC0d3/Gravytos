@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- ERC20 Token Helpers
+// GRAVYTOS -- ERC20 Token Helpers
 // ABI definitions and utility functions for ERC20 interactions
 // ===================================================================
 

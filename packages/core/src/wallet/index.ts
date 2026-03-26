@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Wallet barrel export
+// GRAVYTOS -- Wallet barrel export
 // ===================================================================
 
 export { WalletManager } from './wallet-manager';

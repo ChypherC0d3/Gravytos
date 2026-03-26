@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Settings Store
+// GRAVYTOS — Settings Store
 // Global application preferences (theme, locale, RPC, etc.)
 // ═══════════════════════════════════════════════════════════════
 

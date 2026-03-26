@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Unlock Wallet Modal
+// GRAVYTOS -- Unlock Wallet Modal
 // Simple password prompt to unlock (decrypt) a wallet
 // ===================================================================
 

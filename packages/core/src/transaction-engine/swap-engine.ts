@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Swap Engine
+// GRAVYTOS -- Swap Engine
 // DEX aggregation via Gravytos backend (1inch) and Jupiter (Solana)
 // ===================================================================
 

@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Solana Chain Adapter
+// GRAVYTOS -- Solana Chain Adapter
 // Full adapter for Solana mainnet-beta / devnet
 // ===================================================================
 

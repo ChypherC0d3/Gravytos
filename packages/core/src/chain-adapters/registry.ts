@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Chain Adapter Registry
+// GRAVYTOS -- Chain Adapter Registry
 // Central registry for managing chain adapter instances
 // ===================================================================
 

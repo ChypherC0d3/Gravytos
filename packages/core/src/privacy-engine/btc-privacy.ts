@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Bitcoin Privacy Engine
+// GRAVYTOS -- Bitcoin Privacy Engine
 // Coin Control, UTXO privacy scoring, address rotation
 // ===================================================================
 

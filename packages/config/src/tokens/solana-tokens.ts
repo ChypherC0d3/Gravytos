@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Solana Token Definitions
+// GRAVYTOS -- Solana Token Definitions
 // SPL token mint addresses and metadata for Solana mainnet
 // ===================================================================
 

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — API Client Package
+// GRAVYTOS — API Client Package
 // ═══════════════════════════════════════════════════════════════
 
 export { getSupabaseClient, createWalletClient } from './supabase';

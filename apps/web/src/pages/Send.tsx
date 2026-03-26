@@ -83,14 +83,14 @@ function getStepIndex(step: TxStep): number {
 function Navbar() {
   return (
     <header className="border-b border-white/5 bg-[hsl(220,30%,6%)]/80 backdrop-blur-xl sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <Link to="/dashboard" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-lg shadow-purple-500/20">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
             </svg>
           </div>
-          <span className="text-lg font-light tracking-wide text-white">Nexora Vault</span>
+          <span className="text-lg font-light tracking-wide text-white">Gravytos</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
@@ -538,8 +538,8 @@ export function Send() {
     <div className="min-h-screen dark">
       <Navbar />
 
-      <main className="max-w-2xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-light tracking-wide mb-6 text-white/90">Send</h1>
+      <main className="max-w-lg md:max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-24 md:pb-8">
+        <h1 className="text-xl md:text-2xl font-light tracking-wide mb-4 md:mb-6 text-white/90">Send</h1>
 
         {/* Success State */}
         {txHash ? (
@@ -618,12 +618,12 @@ export function Send() {
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
                     placeholder={isBitcoin ? 'bc1q...' : selectedChain.family === 'solana' ? '7xK...' : '0x...'}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25 transition-all duration-300"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 min-h-12 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25 transition-all duration-300"
                   />
                   <button
                     onClick={() => setShowQRScanner(true)}
                     title="Address Book"
-                    className="px-3 py-3 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 text-white/40 hover:text-purple-400 transition-all duration-300"
+                    className="px-3 py-3 min-h-12 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 text-white/40 hover:text-purple-400 transition-all duration-300"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
@@ -632,7 +632,7 @@ export function Send() {
                   <button
                     onClick={() => setShowQRScanner(true)}
                     title="Scan QR Code"
-                    className="px-3 py-3 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 text-white/40 hover:text-purple-400 transition-all duration-300"
+                    className="px-3 py-3 min-h-12 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 text-white/40 hover:text-purple-400 transition-all duration-300"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
@@ -656,7 +656,7 @@ export function Send() {
                     placeholder="0.00"
                     min="0"
                     step="any"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 pr-24 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25 transition-all duration-300"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 pr-24 min-h-12 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25 transition-all duration-300"
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     <button
@@ -673,7 +673,7 @@ export function Send() {
             </div>
 
             {/* Privacy Slider */}
-            <div className="glass-card p-6 gradient-border relative overflow-hidden">
+            <div className="glass-card p-5 md:p-6 gradient-border relative overflow-hidden">
               <div className="absolute inset-0 opacity-[0.02] gradient-hero" />
               <div className="relative z-10">
                 <PrivacySlider
@@ -789,7 +789,7 @@ export function Send() {
             <button
               onClick={handleReviewClick}
               disabled={!canSend}
-              className={`w-full py-3.5 rounded-lg font-medium text-sm transition-all duration-300 ${
+              className={`w-full py-3.5 min-h-12 rounded-lg font-medium text-sm transition-all duration-300 ${
                 canSend
                   ? 'btn-bevel'
                   : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'

@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- useTransactionEngine Hook
+// GRAVYTOS -- useTransactionEngine Hook
 // Wires the core transaction engine to React
 // ===================================================================
 

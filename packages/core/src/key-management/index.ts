@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Key Management barrel export
+// GRAVYTOS -- Key Management barrel export
 // ===================================================================
 
 export {

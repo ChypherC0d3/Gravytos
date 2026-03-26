@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Audit Exporter
+// GRAVYTOS -- Audit Exporter
 // Export and verify audit logs as portable, verifiable JSON
 // ===================================================================
 

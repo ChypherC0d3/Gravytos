@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Privacy Store
+// GRAVYTOS — Privacy Store
 // Per-chain privacy level overrides with global default
 // ═══════════════════════════════════════════════════════════════
 

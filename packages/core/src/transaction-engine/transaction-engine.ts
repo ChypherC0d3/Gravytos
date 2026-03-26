@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Transaction Engine
+// GRAVYTOS -- Transaction Engine
 // Orchestrates transaction building, privacy enhancement, signing,
 // broadcasting, and audit logging across all supported chains
 // ===================================================================

@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Audit Storage
+// GRAVYTOS -- Audit Storage
 // Pluggable storage backend for the audit event chain
 // ===================================================================
 

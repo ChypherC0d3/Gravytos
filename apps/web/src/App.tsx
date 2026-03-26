@@ -6,6 +6,7 @@ import { useSolBalance } from './hooks/useSolBalance';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useWalletStore } from '@gravytos/state';
 import { MobileNav } from './components/MobileNav';
+import { InstallBanner } from './components/InstallBanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { LoadingScreen } from './components/LoadingScreen';
 
@@ -17,6 +18,7 @@ const Swap = lazy(() => import('./pages/Swap').then(m => ({ default: m.Swap })))
 const Bridge = lazy(() => import('./pages/Bridge').then(m => ({ default: m.Bridge })));
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
 const History = lazy(() => import('./pages/History').then(m => ({ default: m.History })));
+const Download = lazy(() => import('./pages/Download').then(m => ({ default: m.Download })));
 
 export function App() {
   usePrices();
@@ -39,9 +41,11 @@ export function App() {
             <Route path="/bridge" element={<Bridge />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/history" element={<History />} />
+            <Route path="/download" element={<Download />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>
+      <InstallBanner />
       <MobileNav />
     </div>
   );

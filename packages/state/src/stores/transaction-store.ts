@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Transaction Store
+// GRAVYTOS — Transaction Store
 // Pending + confirmed transaction tracking with history cap
 // ═══════════════════════════════════════════════════════════════
 

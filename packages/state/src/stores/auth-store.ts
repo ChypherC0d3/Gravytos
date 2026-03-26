@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Auth Store
+// GRAVYTOS — Auth Store
 // Supabase + wallet-based authentication state
 // ═══════════════════════════════════════════════════════════════
 

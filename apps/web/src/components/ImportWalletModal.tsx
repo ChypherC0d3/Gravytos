@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Import Wallet Modal
+// GRAVYTOS -- Import Wallet Modal
 // 3-step wizard: Enter Mnemonic -> Name/Password -> Success
 // ===================================================================
 

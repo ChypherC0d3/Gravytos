@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Bridge API Client
+// GRAVYTOS — Bridge API Client
 // Quote and execute cross-chain bridges via Supabase Edge Functions
 // ═══════════════════════════════════════════════════════════════
 

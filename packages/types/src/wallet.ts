@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Wallet Types
+// GRAVYTOS — Wallet Types
 // HD wallet management, accounts, and key derivation
 // ═══════════════════════════════════════════════════════════════
 

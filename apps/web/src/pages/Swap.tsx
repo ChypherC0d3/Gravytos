@@ -58,7 +58,7 @@ function getStepIndex(step: SwapStep): number {
 function Navbar() {
   return (
     <header className="border-b border-white/5 bg-[hsl(220,30%,6%)]/80 backdrop-blur-xl sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <Link to="/dashboard" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-lg shadow-purple-500/20">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -237,8 +237,8 @@ export function Swap() {
     <div className="min-h-screen dark">
       <Navbar />
 
-      <main className="max-w-2xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-light tracking-wide mb-6 text-white/90">Swap</h1>
+      <main className="max-w-md md:max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-24 md:pb-8">
+        <h1 className="text-xl md:text-2xl font-light tracking-wide mb-4 md:mb-6 text-white/90">Swap</h1>
 
         {/* Success State */}
         {txHash ? (
@@ -283,15 +283,15 @@ export function Swap() {
             </div>
 
             {/* From Token */}
-            <div className="glass-card p-6 space-y-3">
+            <div className="glass-card p-4 md:p-6 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-light tracking-wider text-white/30 uppercase">From</label>
                 <span className="text-xs font-light text-white/20">Balance: 0.0100 {fromToken}</span>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setShowFromTokenPicker(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300 min-w-[120px]"
+                  className="flex items-center gap-2 px-4 py-2.5 min-h-12 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300 min-w-[120px]"
                 >
                   <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-[10px] font-semibold text-white/70">
                     {fromToken.substring(0, 2)}
@@ -309,7 +309,7 @@ export function Swap() {
                     placeholder="0.00"
                     min="0"
                     step="any"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 pr-16 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 transition-all duration-300"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 pr-16 min-h-12 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 transition-all duration-300"
                   />
                   <button
                     onClick={() => setAmount('0.01')}
@@ -334,12 +334,12 @@ export function Swap() {
             </div>
 
             {/* To Token */}
-            <div className="glass-card p-6 space-y-3">
+            <div className="glass-card p-4 md:p-6 space-y-3">
               <label className="text-xs font-light tracking-wider text-white/30 uppercase">To</label>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setShowToTokenPicker(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300 min-w-[120px]"
+                  className="flex items-center gap-2 px-4 py-2.5 min-h-12 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 transition-all duration-300 min-w-[120px]"
                 >
                   <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center text-[10px] font-semibold text-white/70">
                     {toToken.substring(0, 2)}
@@ -349,14 +349,14 @@ export function Swap() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                   </svg>
                 </button>
-                <div className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-4 py-2.5 text-sm font-mono text-white/40">
+                <div className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-4 py-2.5 min-h-12 text-sm font-mono text-white/40 flex items-center">
                   {quotes.length > 0 ? quotes[selectedQuote].outputAmount : '0.00'}
                 </div>
               </div>
             </div>
 
             {/* Slippage Settings */}
-            <div className="glass-card p-6 space-y-3">
+            <div className="glass-card p-4 md:p-6 space-y-3">
               <button
                 onClick={() => setShowSlippageSettings(!showSlippageSettings)}
                 className="flex items-center justify-between w-full"
@@ -394,7 +394,7 @@ export function Swap() {
             </div>
 
             {/* Privacy Slider */}
-            <div className="glass-card p-6 gradient-border relative overflow-hidden">
+            <div className="glass-card p-4 md:p-6 gradient-border relative overflow-hidden">
               <div className="absolute inset-0 opacity-[0.02] gradient-hero" />
               <div className="relative z-10">
                 <PrivacySlider value={privacyLevel} onChange={setPrivacyLevel} chainId={fromChain} />

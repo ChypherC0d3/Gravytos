@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — State Package
+// GRAVYTOS — State Package
 // ═══════════════════════════════════════════════════════════════
 
 export { useWalletStore } from './stores/wallet-store';

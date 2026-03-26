@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Bitcoin Token Definitions
+// GRAVYTOS -- Bitcoin Token Definitions
 // Native BTC token configuration
 // ===================================================================
 

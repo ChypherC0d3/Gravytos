@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- EVM Token Addresses
+// GRAVYTOS -- EVM Token Addresses
 // Canonical contract addresses for supported EVM chains
 // ===================================================================
 

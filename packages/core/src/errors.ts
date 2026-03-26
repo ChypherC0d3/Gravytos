@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Error Classes
+// GRAVYTOS -- Error Classes
 // Typed error hierarchy for structured error handling
 // ===================================================================
 
@@ -10,7 +10,7 @@ export class GravytosError extends Error {
   /** Machine-readable error code */
   readonly code: string;
 
-  constructor(message: string, code = 'NEXORA_ERROR') {
+  constructor(message: string, code = 'GRAVYTOS_ERROR') {
     super(message);
     this.name = 'GravytosError';
     this.code = code;

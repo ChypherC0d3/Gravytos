@@ -154,14 +154,14 @@ function mapTransactions(txs: HistoricalTransaction[]): HistoryTx[] {
 function Navbar() {
   return (
     <header className="border-b border-white/5 bg-[hsl(220,30%,6%)]/80 backdrop-blur-xl sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <Link to="/dashboard" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-lg shadow-purple-500/20">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
             </svg>
           </div>
-          <span className="text-lg font-light tracking-wide text-white">Nexora Vault</span>
+          <span className="text-lg font-light tracking-wide text-white">Gravytos</span>
         </Link>
         <nav className="hidden md:flex items-center gap-1">
           {[
@@ -270,7 +270,7 @@ export function History() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `nexora-audit-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `gravytos-audit-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         URL.revokeObjectURL(url);
       } else {
@@ -278,7 +278,7 @@ export function History() {
         const auditData = {
           version: '1.0.0',
           exportedAt: Date.now(),
-          application: 'nexora-vault',
+          application: 'gravytos',
           totalEvents: transactions.length,
           integrityVerified: true,
           events: transactions,
@@ -287,7 +287,7 @@ export function History() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `nexora-audit-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `gravytos-audit-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         URL.revokeObjectURL(url);
       }
@@ -296,7 +296,7 @@ export function History() {
       const auditData = {
         version: '1.0.0',
         exportedAt: Date.now(),
-        application: 'nexora-vault',
+        application: 'gravytos',
         totalEvents: transactions.length,
         integrityVerified: true,
         events: transactions,
@@ -305,7 +305,7 @@ export function History() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `nexora-audit-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `gravytos-audit-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -345,9 +345,9 @@ export function History() {
     <div className="min-h-screen dark">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-light tracking-wide text-white/90">Transaction History</h1>
+      <main className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-24 md:pb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 md:mb-6">
+          <h1 className="text-xl md:text-2xl font-light tracking-wide text-white/90">Transaction History</h1>
           <div className="flex items-center gap-3">
             <button
               onClick={refetch}
@@ -429,31 +429,31 @@ export function History() {
                     href={tx.explorerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`glass-card p-5 flex items-center justify-between border-l-2 ${tx.chainBorderColor} hover:border-primary/30 transition-all duration-300 hover:shadow-lg block`}
+                    className={`glass-card p-3 md:p-5 flex items-center justify-between border-l-2 ${tx.chainBorderColor} hover:border-primary/30 transition-all duration-300 hover:shadow-lg block`}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 md:gap-4 min-w-0">
                       {/* Chain Icon */}
-                      <div className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                      <div className="w-9 h-9 md:w-11 md:h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
                         <span className={`text-sm font-bold ${tx.chainColor}`}>{tx.chainIcon}</span>
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-light tracking-wide ${txTypeColor(tx.type)}`}>
+                          <span className={`text-xs md:text-sm font-light tracking-wide ${txTypeColor(tx.type)}`}>
                             {txTypeLabel(tx.type)}
                           </span>
                           {statusBadge(tx.status)}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs font-mono text-white/25">{tx.txHash}</span>
-                          <span className="text-[10px] text-white/15">{formatTime(tx.timestamp)}</span>
+                          <span className="text-[10px] md:text-xs font-mono text-white/25 truncate">{tx.txHash}</span>
+                          <span className="text-[10px] text-white/15 shrink-0 hidden sm:inline">{formatTime(tx.timestamp)}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right shrink-0 ml-2">
                       <div className="flex items-center gap-1">
-                        <span className={`text-sm font-light tracking-wide ${tx.type === 'receive' ? 'text-emerald-400' : 'text-white/70'}`}>
+                        <span className={`text-xs md:text-sm font-light tracking-wide ${tx.type === 'receive' ? 'text-emerald-400' : 'text-white/70'}`}>
                           {tx.type === 'receive' ? '+' : tx.type === 'send' ? '-' : ''}{tx.amount} {tx.token}
                         </span>
                       </div>
@@ -471,10 +471,10 @@ export function History() {
         </div>
 
         {/* Audit Section */}
-        <div className="glass-card p-8 space-y-5 gradient-border">
+        <div className="glass-card p-5 md:p-8 space-y-4 md:space-y-5 gradient-border">
           <h2 className="text-sm font-light tracking-wider text-white/70 uppercase">Audit Trail</h2>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
             <div className="p-4 rounded-lg glass-card text-center">
               <p className="text-2xl font-light text-gradient glow-text">{totalEvents}</p>
               <p className="text-[10px] font-light text-white/30 mt-1 tracking-wider uppercase">Total Events</p>
@@ -491,11 +491,11 @@ export function History() {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={handleExportAudit}
               disabled={exportingAudit}
-              className="flex-1 btn-bevel py-2.5 text-sm disabled:opacity-60"
+              className="flex-1 btn-bevel py-2.5 min-h-11 text-sm disabled:opacity-60"
             >
               {exportingAudit ? (
                 <span className="flex items-center justify-center gap-2">
@@ -517,7 +517,7 @@ export function History() {
             <button
               onClick={handleVerifyIntegrity}
               disabled={verifyingIntegrity}
-              className="flex-1 btn-bevel-outline py-2.5 text-sm disabled:opacity-60"
+              className="flex-1 btn-bevel-outline py-2.5 min-h-11 text-sm disabled:opacity-60"
             >
               {verifyingIntegrity ? (
                 <span className="flex items-center justify-center gap-2">

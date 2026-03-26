@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Transaction Types
+// GRAVYTOS — Transaction Types
 // Multi-chain transaction building, signing, and broadcasting
 // ═══════════════════════════════════════════════════════════════
 

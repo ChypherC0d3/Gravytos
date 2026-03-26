@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Transaction Confirmation Modal
+// GRAVYTOS -- Transaction Confirmation Modal
 // Glass-card confirmation dialog shown before sending
 // ===================================================================
 

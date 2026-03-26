@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Bitcoin Transaction Builder
+// GRAVYTOS -- Bitcoin Transaction Builder
 // PSBT-based transaction construction, signing, and extraction
 // ===================================================================
 

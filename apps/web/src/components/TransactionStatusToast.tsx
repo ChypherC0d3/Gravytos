@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Transaction Status Toast
+// GRAVYTOS -- Transaction Status Toast
 // Bottom-right notification showing real-time transaction progress
 // ===================================================================
 

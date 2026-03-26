@@ -117,7 +117,7 @@ export function Dashboard() {
     <div className="min-h-screen dark">
       {/* Header */}
       <header className="border-b border-white/5 bg-[hsl(220,30%,6%)]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-lg shadow-purple-500/20">
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -157,16 +157,16 @@ export function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        <div className="grid lg:grid-cols-3 gap-6">
+      <main className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-24 md:pb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Left Column: Wallets */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
             {/* Portfolio Overview */}
-            <div className="glass-card p-8 relative overflow-hidden">
+            <div className="glass-card p-5 md:p-8 relative overflow-hidden">
               <div className="absolute inset-0 opacity-5 gradient-hero" />
               <div className="relative z-10">
                 <h2 className="text-sm font-light tracking-wider text-white/40 mb-2 uppercase">Total Portfolio Value</h2>
-                <div className="text-4xl font-light tracking-wide glow-text text-gradient">
+                <div className="text-2xl md:text-4xl font-light tracking-wide glow-text text-gradient">
                   ${portfolioTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <p className="text-xs font-light text-white/30 mt-2 tracking-wide">
@@ -267,19 +267,19 @@ export function Dashboard() {
             {/* Actions */}
             <div>
               <h3 className="text-sm font-light tracking-wider text-white/40 mb-3 uppercase">Actions</h3>
-              <div className="grid grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-3">
                 {ACTIONS.map((action) => (
                   <Link
                     key={action.label}
                     to={action.to}
-                    className="glass-card p-5 text-center group hover:border-purple-500/20 transition-all duration-300"
+                    className="glass-card p-3 md:p-5 text-center group hover:border-purple-500/20 transition-all duration-300"
                   >
-                    <div className="w-10 h-10 mx-auto rounded-xl bg-white/5 group-hover:bg-purple-500/10 group-hover:shadow-lg group-hover:shadow-purple-500/10 flex items-center justify-center mb-3 transition-all duration-300">
+                    <div className="w-9 h-9 md:w-10 md:h-10 mx-auto rounded-xl bg-white/5 group-hover:bg-purple-500/10 group-hover:shadow-lg group-hover:shadow-purple-500/10 flex items-center justify-center mb-2 md:mb-3 transition-all duration-300">
                       <svg className="w-5 h-5 text-white/30 group-hover:text-purple-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d={action.icon} />
                       </svg>
                     </div>
-                    <div className="text-sm font-light tracking-wide text-white/50 group-hover:text-white/80 transition-colors duration-300">{action.label}</div>
+                    <div className="text-xs md:text-sm font-light tracking-wide text-white/50 group-hover:text-white/80 transition-colors duration-300">{action.label}</div>
                   </Link>
                 ))}
               </div>
@@ -287,9 +287,9 @@ export function Dashboard() {
           </div>
 
           {/* Right Column: Privacy & Settings */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Privacy Control */}
-            <div className="glass-card p-6 gradient-border relative overflow-hidden">
+            <div className="glass-card p-5 md:p-6 gradient-border relative overflow-hidden">
               <div className="absolute inset-0 opacity-[0.03] gradient-hero" />
               <div className="relative z-10">
                 <h3 className="text-sm font-light tracking-wider text-white/40 mb-4 uppercase">Privacy Control</h3>

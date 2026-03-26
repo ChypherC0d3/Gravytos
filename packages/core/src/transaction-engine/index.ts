@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Transaction Engine barrel exports
+// GRAVYTOS -- Transaction Engine barrel exports
 // ===================================================================
 
 export { TransactionEngine } from './transaction-engine';

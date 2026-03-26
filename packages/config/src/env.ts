@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Environment Variable Access
+// GRAVYTOS -- Environment Variable Access
 // Unified accessor for Vite-prefixed environment variables
 // ===================================================================
 

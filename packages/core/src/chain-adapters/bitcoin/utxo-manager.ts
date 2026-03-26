@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- UTXO Manager
+// GRAVYTOS -- UTXO Manager
 // UTXO tracking, labeling, freezing, and coin selection algorithms
 // ===================================================================
 

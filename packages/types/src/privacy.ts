@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Privacy Types
+// GRAVYTOS — Privacy Types
 // "Privacy by design + auditability on demand"
 // User-controlled transparency / privacy-enhanced transactions
 // ═══════════════════════════════════════════════════════════════

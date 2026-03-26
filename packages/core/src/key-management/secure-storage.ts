@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Secure Storage Abstraction
+// GRAVYTOS -- Secure Storage Abstraction
 // Provides a pluggable persistence layer for encrypted wallet data
 // ===================================================================
 

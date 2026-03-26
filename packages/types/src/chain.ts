@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Chain Types
+// GRAVYTOS — Chain Types
 // Multi-chain support: Bitcoin (UTXO), EVM (Account), Solana
 // ═══════════════════════════════════════════════════════════════
 

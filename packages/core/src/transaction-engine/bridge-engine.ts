@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Bridge Engine
+// GRAVYTOS -- Bridge Engine
 // Cross-chain bridge via Li.Fi and Gravytos backend
 // ===================================================================
 

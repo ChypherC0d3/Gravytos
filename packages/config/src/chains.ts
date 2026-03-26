@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Chain Configurations
+// GRAVYTOS -- Chain Configurations
 // MVP chain definitions for Bitcoin, EVM, and Solana
 // ===================================================================
 

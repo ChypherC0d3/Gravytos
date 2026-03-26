@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Wallet Store
+// GRAVYTOS — Wallet Store
 // Connection state, balances, and active addresses per chain
 // ═══════════════════════════════════════════════════════════════
 

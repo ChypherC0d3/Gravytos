@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// NEXORA VAULT — Swap API Client
+// GRAVYTOS — Swap API Client
 // Quote and execute token swaps via Supabase Edge Functions
 // ═══════════════════════════════════════════════════════════════
 

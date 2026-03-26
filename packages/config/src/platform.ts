@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Platform Detection
+// GRAVYTOS -- Platform Detection
 // Detect whether the app is running as a Tauri desktop app or in a browser
 // ===================================================================
 

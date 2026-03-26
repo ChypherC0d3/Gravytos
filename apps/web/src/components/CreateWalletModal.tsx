@@ -1,5 +1,5 @@
 // ===================================================================
-// NEXORA VAULT -- Create Wallet Modal
+// GRAVYTOS -- Create Wallet Modal
 // 4-step wizard: Name/Password -> Mnemonic -> Confirm -> Success
 // ===================================================================
 

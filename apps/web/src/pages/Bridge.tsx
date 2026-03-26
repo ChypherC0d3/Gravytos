@@ -50,7 +50,7 @@ function getStepIndex(step: BridgeStep): number {
 function Navbar() {
   return (
     <header className="border-b border-white/5 bg-[hsl(220,30%,6%)]/80 backdrop-blur-xl sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
         <Link to="/dashboard" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center shadow-lg shadow-purple-500/20">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -215,8 +215,8 @@ export function Bridge() {
     <div className="min-h-screen dark">
       <Navbar />
 
-      <main className="max-w-2xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-light tracking-wide mb-6 text-white/90">Bridge</h1>
+      <main className="max-w-md md:max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-24 md:pb-8">
+        <h1 className="text-xl md:text-2xl font-light tracking-wide mb-4 md:mb-6 text-white/90">Bridge</h1>
 
         {/* Success State */}
         {txHash ? (
@@ -269,7 +269,7 @@ export function Bridge() {
         ) : (
           <div className="space-y-6">
             {/* Source Chain */}
-            <div className={`glass-card p-6 space-y-3 border-l-2 ${sourceChainInfo.borderColor}`}>
+            <div className={`glass-card p-4 md:p-6 space-y-3 border-l-2 ${sourceChainInfo.borderColor}`}>
               <label className="text-xs font-light tracking-wider text-white/30 uppercase">From Network</label>
               <div className="flex flex-wrap gap-2">
                 {CHAINS.map((c) => (
@@ -311,7 +311,7 @@ export function Bridge() {
             </div>
 
             {/* Destination Chain */}
-            <div className={`glass-card p-6 space-y-3 border-l-2 ${destChainInfo.borderColor}`}>
+            <div className={`glass-card p-4 md:p-6 space-y-3 border-l-2 ${destChainInfo.borderColor}`}>
               <label className="text-xs font-light tracking-wider text-white/30 uppercase">To Network</label>
               <div className="flex flex-wrap gap-2">
                 {CHAINS.map((c) => (
@@ -342,7 +342,7 @@ export function Bridge() {
             </div>
 
             {/* Token & Amount */}
-            <div className="glass-card p-6 space-y-5">
+            <div className="glass-card p-4 md:p-6 space-y-5">
               <div>
                 <label className="text-xs font-light tracking-wider text-white/30 mb-2 block uppercase">Token</label>
                 <div className="flex gap-2 flex-wrap">
@@ -375,7 +375,7 @@ export function Bridge() {
                     placeholder="0.00"
                     min="0"
                     step="any"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 pr-24 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25 transition-all duration-300"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 pr-24 min-h-12 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25 transition-all duration-300"
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     <button
@@ -403,14 +403,14 @@ export function Bridge() {
                     value={recipientOverride}
                     onChange={(e) => setRecipientOverride(e.target.value)}
                     placeholder="Recipient address on destination chain"
-                    className="mt-2 w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 transition-all duration-300"
+                    className="mt-2 w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 min-h-12 text-sm font-mono text-white/80 placeholder-white/20 focus:outline-none focus:border-purple-500/50 transition-all duration-300"
                   />
                 )}
               </div>
             </div>
 
             {/* Privacy Slider */}
-            <div className="glass-card p-6 gradient-border relative overflow-hidden">
+            <div className="glass-card p-4 md:p-6 gradient-border relative overflow-hidden">
               <div className="absolute inset-0 opacity-[0.02] gradient-hero" />
               <div className="relative z-10">
                 <PrivacySlider value={privacyLevel} onChange={setPrivacyLevel} chainId={sourceChain} />
