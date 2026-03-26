@@ -37,7 +37,6 @@
       "icons/icon.ico",
       "icons/icon.png"
     ],
-    "identifier": "com.gravytos.app",
     "windows": {
       "wix": {
         "language": "en-US"
