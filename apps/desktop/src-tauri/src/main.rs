@@ -2,6 +2,7 @@
 
 use std::fs;
 use std::path::PathBuf;
+use tauri::Manager;
 
 #[tauri::command]
 fn get_platform() -> String {
@@ -10,10 +11,8 @@ fn get_platform() -> String {
 
 #[tauri::command]
 fn get_app_data_dir(app: tauri::AppHandle) -> Result<String, String> {
-    app.path()
-        .app_data_dir()
-        .map(|p| p.to_string_lossy().to_string())
-        .map_err(|e| e.to_string())
+    let path = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().to_string())
 }
 
 #[tauri::command]
@@ -41,6 +40,9 @@ fn file_exists(path: String) -> bool {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             get_platform,
             get_app_data_dir,
