@@ -21,6 +21,7 @@
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules"
   },
   "devDependencies": {
+    "@vitest/ui": "^4.1.1",
     "typescript": "^5.8.3",
     "vite-plugin-top-level-await": "^1.6.0",
     "vite-plugin-wasm": "^3.6.0",
