@@ -7,6 +7,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@gravytos/types': path.resolve(__dirname, '../../packages/types/src'),
+      '@gravytos/config': path.resolve(__dirname, '../../packages/config/src'),
+      '@gravytos/core': path.resolve(__dirname, '../../packages/core/src'),
+      '@gravytos/state': path.resolve(__dirname, '../../packages/state/src'),
+      '@gravytos/ui': path.resolve(__dirname, '../../packages/ui/src'),
+      '@gravytos/api-client': path.resolve(__dirname, '../../packages/api-client/src'),
     },
   },
   // Tauri-specific settings
