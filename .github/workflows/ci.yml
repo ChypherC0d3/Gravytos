@@ -19,16 +19,18 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: TypeScript check (core)
         run: npx tsc --noEmit -p packages/core/tsconfig.json
+        continue-on-error: false
 
       - name: TypeScript check (web)
         run: npx tsc --noEmit -p apps/web/tsconfig.json
+        continue-on-error: false
 
       - name: Run tests
-        run: npx vitest run --reporter=verbose
+        run: npx vitest run
 
       - name: Build web
         run: cd apps/web && npx vite build
