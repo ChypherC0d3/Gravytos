@@ -22,6 +22,19 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-wagmi': ['wagmi', '@rainbow-me/rainbowkit', 'viem'],
+          'vendor-solana': ['@solana/web3.js'],
+          'vendor-bitcoin': ['bitcoinjs-lib', 'bip39'],
+          'vendor-qr': ['qrcode.react', 'jsqr'],
+        },
+      },
+    },
+  },
   optimizeDeps: {
     exclude: ['tiny-secp256k1'],
     include: ['buffer'],

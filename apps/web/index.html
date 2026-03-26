@@ -4,10 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gravytos — Privacy-Enhanced Multi-Chain Wallet</title>
-    <meta name="description" content="Multi-chain wallet with privacy by design and auditability on demand." />
+    <meta name="description" content="Privacy-enhanced multi-chain wallet with auditability on demand. Manage Ethereum, Bitcoin, and Solana assets with built-in privacy features." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#7c3aed" />
+    <link rel="canonical" href="https://gravytos.app" />
+    <meta name="theme-color" content="#0a0a0f" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Gravytos — Privacy-Enhanced Multi-Chain Wallet" />
+    <meta property="og:description" content="Privacy-enhanced multi-chain wallet with auditability on demand. Manage Ethereum, Bitcoin, and Solana assets with built-in privacy features." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://gravytos.app/og-image.png" />
+    <meta property="og:url" content="https://gravytos.app" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Gravytos — Privacy-Enhanced Multi-Chain Wallet" />
+    <meta name="twitter:description" content="Privacy-enhanced multi-chain wallet with auditability on demand. Manage Ethereum, Bitcoin, and Solana assets with built-in privacy features." />
+    <meta name="twitter:image" content="https://gravytos.app/og-image.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <script>
@@ -21,10 +35,5 @@
   <body class="bg-zinc-950 text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
-        navigator.serviceWorker.register('/sw.js');
-      }
-    </script>
   </body>
 </html>

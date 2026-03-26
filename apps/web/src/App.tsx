@@ -1,32 +1,13 @@
 import { Routes, Route } from 'react-router-dom';
-import { Component, lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense } from 'react';
 import { usePrices } from './hooks/usePrices';
 import { useBtcBalance } from './hooks/useBtcBalance';
 import { useSolBalance } from './hooks/useSolBalance';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useWalletStore } from '@gravytos/state';
 import { MobileNav } from './components/MobileNav';
-
-// Error Boundary
-class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
-  state = { error: null as Error | null };
-  static getDerivedStateFromError(error: Error) { return { error }; }
-  render() {
-    if (this.state.error) {
-      return (
-        <div style={{ color: '#f87171', background: '#0d1117', padding: 40, fontFamily: 'monospace' }}>
-          <h2>Page Error</h2>
-          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 14 }}>{this.state.error.message}</pre>
-          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: '#666', marginTop: 10 }}>{this.state.error.stack}</pre>
-          <button onClick={() => this.setState({ error: null })} style={{ marginTop: 20, padding: '8px 16px', background: '#7c3aed', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
-            Try Again
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
+import ErrorBoundary from './components/ErrorBoundary';
+import { LoadingScreen } from './components/LoadingScreen';
 
 const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -36,17 +17,6 @@ const Swap = lazy(() => import('./pages/Swap').then(m => ({ default: m.Swap })))
 const Bridge = lazy(() => import('./pages/Bridge').then(m => ({ default: m.Bridge })));
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
 const History = lazy(() => import('./pages/History').then(m => ({ default: m.History })));
-
-function Loading() {
-  return (
-    <div style={{ color: '#a78bfa', background: '#0d1117', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 32, fontWeight: 300, marginBottom: 8 }}>Gravytos</div>
-        <div style={{ fontSize: 14, color: '#666' }}>Loading...</div>
-      </div>
-    </div>
-  );
-}
 
 export function App() {
   usePrices();
@@ -59,7 +29,7 @@ export function App() {
   return (
     <div className="min-h-screen bg-[hsl(220,30%,6%)] text-white pb-20 md:pb-0">
       <ErrorBoundary>
-        <Suspense fallback={<Loading />}>
+        <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/dashboard" element={<Dashboard />} />

@@ -11,7 +11,7 @@
     "dev:web": "npm run dev --workspace=@gravytos/web",
     "dev:desktop": "npm run dev --workspace=@gravytos/desktop",
     "build": "npm run build --workspaces --if-present",
-    "build:web": "npm run build --workspace=@gravytos/web",
+    "build:web": "cd apps/web && npx vite build",
     "build:desktop": "npm run build --workspace=@gravytos/desktop",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
