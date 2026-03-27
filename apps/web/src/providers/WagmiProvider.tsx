@@ -1,23 +1,20 @@
 import { WagmiProvider as WagmiProviderBase, createConfig, http } from 'wagmi';
-import { mainnet, polygon, arbitrum, base, optimism } from 'wagmi/chains';
+import { mainnet, polygon, arbitrum, base, optimism, sepolia } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { injected, coinbaseWallet } from 'wagmi/connectors';
 import type { ReactNode } from 'react';
 
-// Create wagmi config WITHOUT WalletConnect (avoids projectId requirement)
-// Users can still connect via MetaMask (injected) and Coinbase Wallet
+// Create wagmi config — connectors are auto-detected by wagmi v2
+// This avoids the "Cannot set properties of undefined" crash in production
+const chains = [mainnet, polygon, arbitrum, base, optimism, sepolia] as const;
 const config = createConfig({
-  chains: [mainnet, polygon, arbitrum, base, optimism],
-  connectors: [
-    injected(),
-    coinbaseWallet({ appName: 'Gravytos' }),
-  ],
+  chains,
   transports: {
     [mainnet.id]: http(),
     [polygon.id]: http(),
     [arbitrum.id]: http(),
     [base.id]: http(),
     [optimism.id]: http(),
+    [sepolia.id]: http('https://ethereum-sepolia-rpc.publicnode.com'),
   },
 });
 
