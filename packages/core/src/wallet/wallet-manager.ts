@@ -92,14 +92,65 @@ export class WalletManager {
     // Persist encrypted vault
     await this.storage.save(vaultKey(walletId), JSON.stringify(vault));
 
-    // Persist metadata
+    // Derive default accounts for each chain
+    const btcKey = deriveBitcoinKey(seed, 0, 0);
+    const ethKey = deriveEthereumKey(seed, 0);
+    const solKey = deriveSolanaKey(seed, 0);
+
+    const now = Date.now();
+    const defaultAccounts: WalletAccount[] = [
+      {
+        id: generateId(),
+        walletId,
+        chainFamily: ChainFamily.Bitcoin,
+        chainId: 'bitcoin-mainnet',
+        address: btcKey.address,
+        publicKey: bytesToHex(btcKey.publicKey),
+        derivationPath: btcKey.derivationPath,
+        label: 'Bitcoin',
+        accountIndex: 0,
+        addressIndex: 0,
+        createdAt: now,
+        metadata: {},
+      },
+      {
+        id: generateId(),
+        walletId,
+        chainFamily: ChainFamily.EVM,
+        chainId: 'ethereum-1',
+        address: ethKey.address,
+        publicKey: bytesToHex(ethKey.publicKey),
+        derivationPath: ethKey.derivationPath,
+        label: 'Ethereum',
+        accountIndex: 0,
+        addressIndex: 0,
+        createdAt: now,
+        metadata: {},
+      },
+      {
+        id: generateId(),
+        walletId,
+        chainFamily: ChainFamily.Solana,
+        chainId: 'solana-mainnet',
+        address: solKey.address,
+        publicKey: bytesToHex(solKey.publicKey),
+        derivationPath: solKey.derivationPath,
+        label: 'Solana',
+        accountIndex: 0,
+        addressIndex: 0,
+        createdAt: now,
+        metadata: {},
+      },
+    ];
+
+    // Persist metadata with derived accounts
     const meta: WalletMeta = {
       id: walletId,
       name,
       createdAt: Date.now(),
-      accounts: [],
-      nextIndex: {},
-      nextBtcAddressIndex: 0,
+      accounts: defaultAccounts,
+      nextIndex: { bitcoin: 1, evm: 1, solana: 1 },
+      nextBtcAddressIndex: 1,
     };
     await this.storage.save(metaKey(walletId), JSON.stringify(meta));
 
@@ -285,6 +336,19 @@ export class WalletManager {
   }
 
   // ── Private Helpers ───────────────────────────────────────
+
+  /**
+   * Derive default addresses (BTC, ETH, SOL) from an unlocked wallet.
+   * Useful for wallets created before default account derivation was added.
+   */
+  deriveDefaultAddresses(walletId: string): { btc: string; eth: string; sol: string } {
+    const seed = this.requireUnlocked(walletId);
+    return {
+      btc: deriveBitcoinKey(seed, 0, 0).address,
+      eth: deriveEthereumKey(seed, 0).address,
+      sol: deriveSolanaKey(seed, 0).address,
+    };
+  }
 
   private requireUnlocked(walletId: string): Uint8Array {
     const seed = this.unlockedSeeds.get(walletId);

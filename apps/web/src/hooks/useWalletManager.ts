@@ -108,8 +108,19 @@ export function useWalletManager() {
     const manager = getManager();
     await manager.unlockWallet(walletId, password);
 
-    // Derive default accounts for each chain and update store
-    const accounts = await manager.getAccounts(walletId);
+    // Get stored accounts
+    let accounts = await manager.getAccounts(walletId);
+
+    // If no accounts (old wallet created before default derivation), derive on the fly
+    if (!accounts || accounts.length === 0) {
+      const addrs = manager.deriveDefaultAddresses(walletId);
+      walletStore.setBtcWallet(addrs.btc);
+      walletStore.setEvmWallet(addrs.eth, 1);
+      walletStore.setSolanaWallet(addrs.sol);
+      useWalletStore.getState().setActiveWalletId(walletId);
+      return;
+    }
+
     const btcAccount = accounts.find((a) => a.chainFamily === 'bitcoin');
     const evmAccount = accounts.find((a) => a.chainFamily === 'evm');
     const solAccount = accounts.find((a) => a.chainFamily === 'solana');
