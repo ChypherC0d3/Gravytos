@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { PrivacyLevel, AuditActionType } from '@gravytos/types';
+import { PrivacyLevel, AuditActionType, ChainFamily } from '@gravytos/types';
 import type { TransactionRequest } from '@gravytos/types';
 import { PrivacySlider } from '@gravytos/ui';
 import { usePrivacyStore, useWalletStore } from '@gravytos/state';
@@ -15,6 +15,7 @@ import type { TransactionConfirmDetails } from '../components/TransactionConfirm
 import { TransactionStatusToast } from '../components/TransactionStatusToast';
 import type { ToastData } from '../components/TransactionStatusToast';
 import { useTransactionEngine } from '../hooks/useTransactionEngine';
+import { useWalletManager } from '../hooks/useWalletManager';
 import { QRScanner } from '../components/QRScanner';
 import { TokenPicker } from '../components/TokenPicker';
 import type { Token } from '../components/TokenPicker';
@@ -52,15 +53,18 @@ const NATIVE_TOKENS: Record<string, string> = {
   'solana-mainnet': 'SOL',
 };
 
-// ─── Mock UTXOs for Coin Control ─────────────────────────────
+// ─── UTXO type for Coin Control ──────────────────────────────
 
-const MOCK_UTXOS = [
-  { txid: 'a1b2c3d4...f5e6', vout: 0, value: 0.005, address: 'bc1q...x7k2', label: 'Exchange withdrawal', confirmations: 142, frozen: false },
-  { txid: 'b2c3d4e5...a1f6', vout: 1, value: 0.012, address: 'bc1q...m3n4', label: 'Payment received', confirmations: 89, frozen: false },
-  { txid: 'c3d4e5f6...b2a1', vout: 0, value: 0.0008, address: 'bc1q...p5q6', label: 'Dust from swap', confirmations: 321, frozen: true },
-  { txid: 'd4e5f6a7...c3b2', vout: 2, value: 0.025, address: 'bc1q...r7s8', label: 'Mining payout', confirmations: 1024, frozen: false },
-  { txid: 'e5f6a7b8...d4c3', vout: 0, value: 0.0015, address: 'bc1q...t9u0', label: '', confirmations: 45, frozen: false },
-];
+interface Utxo {
+  txid: string;
+  vout: number;
+  value: number;
+  address?: string;
+  label?: string;
+  confirmations?: number;
+  frozen?: boolean;
+  status?: { confirmed: boolean; block_height?: number };
+}
 
 // ─── Tx Progress Steps ───────────────────────────────────────
 
@@ -134,7 +138,8 @@ function isNativeTokenForChain(chainId: string, tokenSymbol: string): boolean {
 
 export function Send() {
   const { globalLevel } = usePrivacyStore();
-  const { evmAddress, solanaAddress, balances, evmChainId } = useWalletStore();
+  const { evmAddress, solanaAddress, btcAddress, activeWalletId, balances, evmChainId } = useWalletStore();
+  const { derivePrivateKey } = useWalletManager();
   const { address: wagmiAddress } = useAccount();
 
   // Wagmi hooks for EVM transactions
@@ -153,6 +158,7 @@ export function Send() {
   const [txStep, setTxStep] = useState<TxStep | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [selectedUtxos, setSelectedUtxos] = useState<Set<string>>(new Set());
+  const [availableUtxos, setAvailableUtxos] = useState<Utxo[]>([]);
 
   // Modal + toast state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -164,11 +170,24 @@ export function Send() {
 
   const selectedChain = CHAINS.find((c) => c.id === chain)!;
 
+  // Fetch real UTXOs when BTC chain is selected
+  useEffect(() => {
+    if (selectedChain.family === 'bitcoin' && btcAddress) {
+      fetch(`https://blockstream.info/api/address/${btcAddress}/utxo`)
+        .then((r) => r.json())
+        .then((utxos: Utxo[]) => setAvailableUtxos(utxos))
+        .catch(() => setAvailableUtxos([]));
+    } else {
+      setAvailableUtxos([]);
+    }
+  }, [selectedChain.family, btcAddress]);
+
   const connectedAddress = useMemo(() => {
     if (selectedChain.family === 'evm') return evmAddress ?? wagmiAddress ?? null;
-    if (selectedChain.family === 'solana') return solanaAddress;
+    if (selectedChain.family === 'bitcoin') return btcAddress ?? null;
+    if (selectedChain.family === 'solana') return solanaAddress ?? null;
     return null;
-  }, [selectedChain.family, evmAddress, solanaAddress, wagmiAddress]);
+  }, [selectedChain.family, evmAddress, btcAddress, solanaAddress, wagmiAddress]);
 
   const currentBalance = useMemo(() => {
     const chainKey = selectedChain.family === 'evm' && evmChainId
@@ -181,8 +200,8 @@ export function Send() {
   const showCoinControl = isBitcoin && privacyLevel === PrivacyLevel.High;
 
   const selectedUtxoTotal = useMemo(() => {
-    return MOCK_UTXOS.filter((u) => selectedUtxos.has(u.txid)).reduce((sum, u) => sum + u.value, 0);
-  }, [selectedUtxos]);
+    return availableUtxos.filter((u) => selectedUtxos.has(u.txid)).reduce((sum, u) => sum + u.value, 0);
+  }, [availableUtxos, selectedUtxos]);
 
   const feeEstimate = useMemo(() => {
     const base = isBitcoin ? 0.00002 : 0.001;
@@ -417,54 +436,38 @@ export function Send() {
     }
 
     // ─── Bitcoin flow ─────────────────────────────────────────
-    // BTC send: derive key, build PSBT, sign, broadcast
-    // Full flow will use WalletManager + BitcoinAdapter
     if (selectedChain.family === 'bitcoin') {
-      setTxStep('building');
-      setTxStep(null);
-      setSending(false);
-      setTxError('BTC send requires wallet to be unlocked in Settings first');
-      setToastData({
-        id: Date.now().toString(),
-        status: 'failed',
-        errorMessage: 'BTC send requires wallet to be unlocked in Settings first',
-      });
-      return;
-    }
-
-    // ─── Solana flow ──────────────────────────────────────────
-    if (selectedChain.family === 'solana') {
-      if (!solanaAddress) {
-        setTxStep('building');
+      if (!activeWalletId || !btcAddress) {
         setTxStep(null);
         setSending(false);
-        setTxError('SOL send requires wallet to be unlocked in Settings first');
+        setTxError('Unlock your wallet first in Settings');
         setToastData({
           id: Date.now().toString(),
           status: 'failed',
-          errorMessage: 'SOL send requires wallet to be unlocked in Settings first',
+          errorMessage: 'Unlock your wallet first in Settings',
         });
         return;
       }
 
-      // Use the transaction engine for Solana
       try {
         setTxStep('signing');
         setToastData((prev) => prev ? { ...prev, status: 'signing' } : null);
 
+        const privateKey = await derivePrivateKey(activeWalletId, ChainFamily.Bitcoin);
+
         const request: TransactionRequest = {
           chainId: chain,
-          from: solanaAddress,
+          from: btcAddress,
           to: recipient,
           value: amount,
-          walletId: solanaAddress,
+          walletId: activeWalletId,
           privacyLevel,
         };
 
-        const result = await engineSendTx(request);
-
         setTxStep('broadcasting');
-        setToastData({ id: Date.now().toString(), status: 'broadcasting', txHash: result.txHash });
+        setToastData((prev) => prev ? { ...prev, status: 'broadcasting' } : null);
+
+        const result = await engineSendTx(request, privateKey);
 
         logToAudit(result.txHash);
 
@@ -502,11 +505,91 @@ export function Send() {
         const msg = err instanceof Error ? err.message : String(err);
         setTxStep(null);
         setSending(false);
-        setTxError(msg);
+        setTxError(msg || 'Bitcoin transaction failed');
         setToastData({
           id: Date.now().toString(),
           status: 'failed',
-          errorMessage: msg,
+          errorMessage: msg || 'Bitcoin transaction failed',
+        });
+      }
+      return;
+    }
+
+    // ─── Solana flow ──────────────────────────────────────────
+    if (selectedChain.family === 'solana') {
+      if (!activeWalletId || !solanaAddress) {
+        setTxStep(null);
+        setSending(false);
+        setTxError('Unlock your wallet first in Settings');
+        setToastData({
+          id: Date.now().toString(),
+          status: 'failed',
+          errorMessage: 'Unlock your wallet first in Settings',
+        });
+        return;
+      }
+
+      try {
+        setTxStep('signing');
+        setToastData((prev) => prev ? { ...prev, status: 'signing' } : null);
+
+        const privateKey = await derivePrivateKey(activeWalletId, ChainFamily.Solana);
+
+        const request: TransactionRequest = {
+          chainId: chain,
+          from: solanaAddress,
+          to: recipient,
+          value: amount,
+          walletId: activeWalletId,
+          privacyLevel,
+        };
+
+        setTxStep('broadcasting');
+        setToastData((prev) => prev ? { ...prev, status: 'broadcasting' } : null);
+
+        const result = await engineSendTx(request, privateKey);
+
+        logToAudit(result.txHash);
+
+        // Wait for confirmation
+        setTxStep('confirming');
+        setToastData({
+          id: Date.now().toString(),
+          status: 'confirming',
+          txHash: result.txHash,
+        });
+
+        const confirmed = await waitForConfirmation(chain, result.txHash);
+
+        if (confirmed.status === 'confirmed') {
+          setTxStep('done');
+          setTxHash(result.txHash);
+          setToastData({
+            id: Date.now().toString(),
+            status: 'confirmed',
+            txHash: result.txHash,
+            explorerUrl: `${selectedChain.explorer}${result.txHash}`,
+          });
+        } else {
+          setTxStep('done');
+          setTxHash(result.txHash);
+          setToastData({
+            id: Date.now().toString(),
+            status: 'confirming',
+            txHash: result.txHash,
+            explorerUrl: `${selectedChain.explorer}${result.txHash}`,
+          });
+        }
+        setSending(false);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setTxStep(null);
+        setSending(false);
+        setTxError(msg || 'Solana transaction failed');
+        setToastData({
+          id: Date.now().toString(),
+          status: 'failed',
+          errorMessage: msg || 'Solana transaction failed',
         });
       }
       return;
@@ -695,7 +778,7 @@ export function Send() {
                 </div>
                 <p className="text-xs font-light text-white/30 tracking-wide">Manually select UTXOs for maximum privacy control.</p>
                 <div className="space-y-2">
-                  {MOCK_UTXOS.map((utxo) => (
+                  {availableUtxos.map((utxo) => (
                     <label
                       key={utxo.txid}
                       className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-300 ${

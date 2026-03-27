@@ -204,6 +204,36 @@ export class WalletManager {
   }
 
   /**
+   * Derive and return the raw private key for a given chain family.
+   * The wallet must be unlocked. This is the key needed to sign transactions.
+   */
+  derivePrivateKey(
+    walletId: string,
+    chainFamily: ChainFamily,
+    accountIndex: number = 0,
+    addressIndex: number = 0,
+  ): Uint8Array {
+    const seed = this.requireUnlocked(walletId);
+
+    let derived;
+    switch (chainFamily) {
+      case ChainFamily.Bitcoin:
+        derived = deriveBitcoinKey(seed, accountIndex, addressIndex);
+        break;
+      case ChainFamily.EVM:
+        derived = deriveEthereumKey(seed, accountIndex);
+        break;
+      case ChainFamily.Solana:
+        derived = deriveSolanaKey(seed, accountIndex);
+        break;
+      default:
+        throw new Error(`Unsupported chain family: ${chainFamily}`);
+    }
+
+    return derived.privateKey;
+  }
+
+  /**
    * Get all derived accounts for a wallet.
    */
   async getAccounts(walletId: string): Promise<WalletAccount[]> {

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PrivacyLevel } from '@gravytos/types';
+import { PrivacyLevel, ChainFamily } from '@gravytos/types';
 import { PrivacySlider } from '@gravytos/ui';
-import { usePrivacyStore } from '@gravytos/state';
+import { usePrivacyStore, useWalletStore } from '@gravytos/state';
 import { useERC20Approval } from '../hooks/useERC20Approval';
 import { useTransactionEngine } from '../hooks/useTransactionEngine';
+import { useWalletManager } from '../hooks/useWalletManager';
 import { useAccount, useSendTransaction } from 'wagmi';
-import { getTokenAddress, NATIVE_TOKEN_ADDRESS } from '@gravytos/config';
+import { getTokenAddress, NATIVE_TOKEN_ADDRESS, getSolanaToken } from '@gravytos/config';
 import { TokenPicker } from '../components/TokenPicker';
 import type { Token } from '../components/TokenPicker';
 import type { SwapQuote } from '@gravytos/types';
@@ -84,7 +85,9 @@ export function Swap() {
   const { globalLevel } = usePrivacyStore();
   const { address: walletAddress } = useAccount();
   const { sendTransactionAsync } = useSendTransaction();
-  const { getSwapQuote, executeSwap } = useTransactionEngine();
+  const { getSwapQuote, executeSwap, getJupiterQuote, getJupiterSwapTransaction } = useTransactionEngine();
+  const { derivePrivateKey } = useWalletManager();
+  const { solanaAddress, activeWalletId } = useWalletStore();
 
   const [fromChain, setFromChain] = useState('ethereum-1');
   const [fromToken, setFromToken] = useState('ETH');
@@ -95,6 +98,7 @@ export function Swap() {
   const [showSlippageSettings, setShowSlippageSettings] = useState(false);
   const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>(globalLevel);
   const [quote, setQuote] = useState<SwapQuote | null>(null);
+  const [jupiterQuoteResponse, setJupiterQuoteResponse] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
   const [swapping, setSwapping] = useState(false);
   const [swapStep, setSwapStep] = useState<SwapStep | null>(null);
@@ -147,31 +151,67 @@ export function Swap() {
       setError('Please connect your wallet first.');
       return;
     }
+    if (isSolana && !solanaAddress) {
+      setError('Unlock wallet first to get Solana address.');
+      return;
+    }
 
     setLoading(true);
     setQuote(null);
     setError(null);
 
     try {
-      // Resolve token addresses
-      const fromAddr = getTokenAddress(evmChainId, fromToken) || NATIVE_TOKEN_ADDRESS;
-      const toAddr = getTokenAddress(evmChainId, toToken) || NATIVE_TOKEN_ADDRESS;
+      if (isSolana) {
+        // ── Jupiter quote path for Solana ──────────────────────
+        const NATIVE_SOL_MINT = 'So11111111111111111111111111111111111111112';
+        const fromSolToken = getSolanaToken(fromToken);
+        const toSolToken = getSolanaToken(toToken);
+        const inputMint = fromSolToken?.mint || NATIVE_SOL_MINT;
+        const outputMint = toSolToken?.mint || NATIVE_SOL_MINT;
+        const decimals = fromSolToken?.decimals ?? 9;
+        const amountInSmallestUnit = BigInt(Math.floor(parseFloat(amount) * 10 ** decimals)).toString();
 
-      // Convert amount to smallest unit (wei for 18 decimals, or 6 for stablecoins)
-      const decimals = ['USDC', 'USDT'].includes(fromToken) ? 6 : 18;
-      const amountInSmallestUnit = BigInt(Math.floor(parseFloat(amount) * 10 ** decimals)).toString();
+        const jupResult = await getJupiterQuote({
+          inputMint,
+          outputMint,
+          amount: amountInSmallestUnit,
+          slippageBps: Math.round(effectiveSlippage * 100),
+          userPublicKey: solanaAddress!,
+        });
 
-      const result = await getSwapQuote({
-        chainId: fromChain,
-        fromToken: fromAddr,
-        toToken: toAddr,
-        amount: amountInSmallestUnit,
-        slippage: effectiveSlippage,
-        userAddress: walletAddress || '',
-      });
+        // Normalise Jupiter response into our SwapQuote shape
+        setJupiterQuoteResponse(jupResult.quoteResponse);
+        setQuote({
+          provider: 'Jupiter',
+          inputAmount: amountInSmallestUnit,
+          outputAmount: jupResult.outputAmount,
+          platformFee: '0',
+          priceImpact: jupResult.priceImpact,
+          estimatedGas: '5000', // Solana: ~5000 compute units, not directly comparable
+          route: [],
+          expiresAt: Date.now() + 30_000, // Jupiter quotes are short-lived
+        });
+        setSwapPhase('quote');
+      } else {
+        // ── 1inch quote path for EVM ───────────────────────────
+        const fromAddr = getTokenAddress(evmChainId, fromToken) || NATIVE_TOKEN_ADDRESS;
+        const toAddr = getTokenAddress(evmChainId, toToken) || NATIVE_TOKEN_ADDRESS;
 
-      setQuote(result);
-      setSwapPhase('quote');
+        const decimals = ['USDC', 'USDT'].includes(fromToken) ? 6 : 18;
+        const amountInSmallestUnit = BigInt(Math.floor(parseFloat(amount) * 10 ** decimals)).toString();
+
+        const result = await getSwapQuote({
+          chainId: fromChain,
+          fromToken: fromAddr,
+          toToken: toAddr,
+          amount: amountInSmallestUnit,
+          slippage: effectiveSlippage,
+          userAddress: walletAddress || '',
+        });
+
+        setQuote(result);
+        setSwapPhase('quote');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to get quote. Please try again.');
     } finally {
@@ -198,6 +238,68 @@ export function Swap() {
    */
   async function handleSwap() {
     if (!quote) return;
+
+    // ── Solana swap path: Jupiter + private key signing ─────
+    if (isSolana) {
+      if (!activeWalletId || !solanaAddress) {
+        setError('Unlock wallet first');
+        return;
+      }
+
+      setSwapping(true);
+      setError(null);
+
+      try {
+        setSwapStep('swapping');
+
+        // 1. Get the serialised swap transaction from Jupiter
+        if (!jupiterQuoteResponse) {
+          throw new Error('Missing Jupiter quote data. Please refresh the quote.');
+        }
+
+        const swapTx = await getJupiterSwapTransaction(jupiterQuoteResponse, solanaAddress);
+
+        // 2. Derive the Solana private key
+        const privateKeyBytes = derivePrivateKey(activeWalletId, ChainFamily.Solana);
+
+        // 3. Deserialise, sign, and broadcast the transaction
+        setSwapStep('confirming');
+        const { Connection, VersionedTransaction, Keypair } = await import('@solana/web3.js');
+        const connection = new Connection('https://api.mainnet-beta.solana.com');
+
+        const txBuffer = Buffer.from(swapTx.swapTransaction, 'base64');
+        const transaction = VersionedTransaction.deserialize(txBuffer);
+
+        const keypair = Keypair.fromSecretKey(privateKeyBytes);
+        transaction.sign([keypair]);
+
+        const rawTx = transaction.serialize();
+        const txSignature = await connection.sendRawTransaction(rawTx, {
+          skipPreflight: false,
+          maxRetries: 2,
+        });
+
+        setSwapStep('done');
+        setSwapPhase('done');
+        setTxHash(txSignature);
+      } catch (err: any) {
+        const message = err.message || 'Swap failed';
+        if (message.includes('rejected') || message.includes('denied')) {
+          setError('Transaction was rejected.');
+        } else if (message.includes('insufficient') || message.includes('0x1')) {
+          setError('Insufficient balance for this swap.');
+        } else if (message.includes('timed out')) {
+          setError('Request timed out. Please try again.');
+        } else {
+          setError(message.length > 200 ? message.substring(0, 200) + '...' : message);
+        }
+      } finally {
+        setSwapping(false);
+      }
+      return; // Don't fall through to EVM path
+    }
+
+    // ── EVM swap path: 1inch + wagmi sendTransaction ────────
     if (!walletAddress) {
       setError('Please connect your wallet first.');
       return;
@@ -275,6 +377,7 @@ export function Swap() {
   function resetForm() {
     setAmount('');
     setQuote(null);
+    setJupiterQuoteResponse(null);
     setTxHash(null);
     setSwapStep(null);
     setSwapping(false);

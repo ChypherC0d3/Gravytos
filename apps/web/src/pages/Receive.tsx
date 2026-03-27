@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { QRCode } from '../components/QRCode';
 import { QRScanner } from '../components/QRScanner';
+import { useWalletStore } from '@gravytos/state';
 
 // ─── Chain Definitions ───────────────────────────────────────
 
@@ -14,22 +15,6 @@ const CHAINS = [
   { id: 'base-8453', name: 'Base', symbol: 'ETH', color: 'from-blue-500 to-blue-700', textColor: 'text-blue-300', family: 'evm' },
   { id: 'optimism-10', name: 'Optimism', symbol: 'ETH', color: 'from-red-500 to-red-600', textColor: 'text-red-400', family: 'evm' },
 ];
-
-const MOCK_ADDRESSES: Record<string, string[]> = {
-  'bitcoin-mainnet': [
-    'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
-    'bc1q9h5yjqka3mvmf5j8m3ryl5fe0cr5yqkf9xaltz',
-    'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
-    'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
-    'bc1q0ht9tyksv2qxdkygqkf8jqtw9gfzdn39hc3r0e',
-  ],
-  'ethereum-1': ['0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38'],
-  'solana-mainnet': ['7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU'],
-  'polygon-137': ['0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38'],
-  'arbitrum-42161': ['0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38'],
-  'base-8453': ['0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38'],
-  'optimism-10': ['0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38'],
-};
 
 // ─── Chain type helper for QR code URI formatting ───────────
 function getChainType(chainId: string): 'bitcoin' | 'ethereum' | 'solana' | undefined {
@@ -74,6 +59,7 @@ function Navbar() {
 // ─── Receive Page ────────────────────────────────────────────
 
 export function Receive() {
+  const { btcAddress, evmAddress, solanaAddress } = useWalletStore();
   const [chain, setChain] = useState('bitcoin-mainnet');
   const [addressIndex, setAddressIndex] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -83,8 +69,20 @@ export function Receive() {
   const [showScanner, setShowScanner] = useState(false);
   const [scannedAddress, setScannedAddress] = useState<string | null>(null);
 
+  const noWallet = !btcAddress && !evmAddress && !solanaAddress;
+
+  const realAddresses: Record<string, string[]> = useMemo(() => ({
+    'bitcoin-mainnet': btcAddress ? [btcAddress] : [],
+    'ethereum-1': evmAddress ? [evmAddress] : [],
+    'solana-mainnet': solanaAddress ? [solanaAddress] : [],
+    'polygon-137': evmAddress ? [evmAddress] : [],
+    'arbitrum-42161': evmAddress ? [evmAddress] : [],
+    'base-8453': evmAddress ? [evmAddress] : [],
+    'optimism-10': evmAddress ? [evmAddress] : [],
+  }), [btcAddress, evmAddress, solanaAddress]);
+
   const selectedChain = CHAINS.find((c) => c.id === chain)!;
-  const addresses = MOCK_ADDRESSES[chain] ?? [];
+  const addresses = realAddresses[chain] ?? [];
   const currentAddress = addresses[addressIndex] ?? 'No address available';
   const isBitcoin = selectedChain.family === 'bitcoin';
 
@@ -96,6 +94,9 @@ export function Receive() {
   }
 
   function generateNewAddress() {
+    if (noWallet) return;
+    // existing logic for cycling through addresses, or for BTC: call HD rotation
+    // For now, just keep the existing index cycling
     if (addressIndex < addresses.length - 1) {
       setAddressIndex((prev) => prev + 1);
     }
@@ -135,85 +136,94 @@ export function Receive() {
 
         {/* QR Code & Address */}
         <div className="glass-card p-5 md:p-10 text-center space-y-6 md:space-y-8 animate-pulse-glow">
-          <QRCode value={currentAddress} size={200} chain={getChainType(chain)} className="shadow-lg shadow-purple-500/10 mx-auto" />
-
-          <div>
-            <p className="text-xs font-light tracking-wider text-white/30 mb-3 uppercase">Your {selectedChain.name} Address</p>
-            <div className="glass-card p-5 gradient-border">
-              <p className="text-xs md:text-sm font-mono text-white/70 break-all leading-relaxed tracking-wide">{currentAddress}</p>
+          {currentAddress === 'No address available' ? (
+            <div className="text-center py-8">
+              <p className="text-white/40">Create or unlock a wallet to receive funds</p>
+              <Link to="/settings" className="text-purple-400 hover:text-purple-300 text-sm mt-2 inline-block">Go to Settings &rarr;</Link>
             </div>
-          </div>
+          ) : (
+            <>
+              <QRCode value={currentAddress} size={200} chain={getChainType(chain)} className="shadow-lg shadow-purple-500/10 mx-auto" />
 
-          {/* Copy Button */}
-          <button
-            onClick={handleCopy}
-            className={`transition-all duration-300 min-h-11 ${
-              copied
-                ? 'inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                : 'btn-bevel px-8 py-2.5'
-            }`}
-          >
-            {copied ? (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-                Copied!
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
-                </svg>
-                Copy Address
-              </>
-            )}
-          </button>
+              <div>
+                <p className="text-xs font-light tracking-wider text-white/30 mb-3 uppercase">Your {selectedChain.name} Address</p>
+                <div className="glass-card p-5 gradient-border">
+                  <p className="text-xs md:text-sm font-mono text-white/70 break-all leading-relaxed tracking-wide">{currentAddress}</p>
+                </div>
+              </div>
 
-          {/* Scan QR Button */}
-          <button
-            onClick={() => setShowScanner(true)}
-            className="btn-bevel-outline px-6 py-2.5 min-h-11"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625v2.625m3.375-2.625V21m3.375-7.875v3.375M17.25 14.625h3.375" />
-            </svg>
-            Scan QR Code
-          </button>
-
-          {/* Scanned Address Display */}
-          {scannedAddress && (
-            <div className="glass-card p-4 gradient-border">
-              <p className="text-xs font-light tracking-wider text-white/30 mb-2 uppercase">Scanned Address</p>
-              <p className="text-sm font-mono text-white/70 break-all leading-relaxed tracking-wide">{scannedAddress}</p>
+              {/* Copy Button */}
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(scannedAddress).catch(() => {});
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-                className="mt-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                onClick={handleCopy}
+                className={`transition-all duration-300 min-h-11 ${
+                  copied
+                    ? 'inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                    : 'btn-bevel px-8 py-2.5'
+                }`}
               >
-                Copy to clipboard
+                {copied ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+                    </svg>
+                    Copy Address
+                  </>
+                )}
               </button>
-            </div>
-          )}
 
-          {/* Generate New Address (BTC only) */}
-          {isBitcoin && (
-            <div className="pt-2">
+              {/* Scan QR Button */}
               <button
-                onClick={generateNewAddress}
-                disabled={addressIndex >= addresses.length - 1}
-                className="btn-bevel-outline py-2 px-5 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => setShowScanner(true)}
+                className="btn-bevel-outline px-6 py-2.5 min-h-11"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625v2.625m3.375-2.625V21m3.375-7.875v3.375M17.25 14.625h3.375" />
                 </svg>
-                Generate New Address (HD Rotation)
+                Scan QR Code
               </button>
-            </div>
+
+              {/* Scanned Address Display */}
+              {scannedAddress && (
+                <div className="glass-card p-4 gradient-border">
+                  <p className="text-xs font-light tracking-wider text-white/30 mb-2 uppercase">Scanned Address</p>
+                  <p className="text-sm font-mono text-white/70 break-all leading-relaxed tracking-wide">{scannedAddress}</p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(scannedAddress).catch(() => {});
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="mt-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    Copy to clipboard
+                  </button>
+                </div>
+              )}
+
+              {/* Generate New Address (BTC only) */}
+              {isBitcoin && (
+                <div className="pt-2">
+                  <button
+                    onClick={generateNewAddress}
+                    disabled={noWallet || addressIndex >= addresses.length - 1}
+                    className="btn-bevel-outline py-2 px-5 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+                    </svg>
+                    Generate New Address (HD Rotation)
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
 

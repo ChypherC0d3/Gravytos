@@ -82,7 +82,7 @@ export function useTransactionEngine() {
   // ── Send Transaction ──────────────────────────────────────
 
   const sendTransaction = useCallback(
-    async (request: TransactionRequest) => {
+    async (request: TransactionRequest, privateKey?: Uint8Array) => {
       const engine = getEngine();
 
       addPending({
@@ -96,7 +96,7 @@ export function useTransactionEngine() {
       });
 
       try {
-        const result = await engine.send(request);
+        const result = await engine.send(request, privateKey);
         updateStatus(result.txHash, 'broadcasting');
         return result;
       } catch (error) {

@@ -14,6 +14,7 @@ import {
   deriveEthereumKey,
   deriveSolanaKey,
 } from '@gravytos/core';
+import { ChainFamily } from '@gravytos/types';
 import { useWalletStore } from '@gravytos/state';
 
 export interface WalletListEntry {
@@ -75,6 +76,7 @@ export function useWalletManager() {
   const lockWallet = useCallback(async (walletId: string) => {
     const manager = getManager();
     await manager.lockWallet(walletId);
+    useWalletStore.getState().setActiveWalletId(null);
     walletStore.disconnectAll();
   }, [getManager, walletStore]);
 
@@ -93,6 +95,14 @@ export function useWalletManager() {
     await manager.deleteWallet(walletId);
   }, [getManager]);
 
+  const derivePrivateKey = useCallback(
+    (walletId: string, chainFamily: ChainFamily, accountIndex?: number, addressIndex?: number): Uint8Array => {
+      const manager = getManager();
+      return manager.derivePrivateKey(walletId, chainFamily, accountIndex, addressIndex);
+    },
+    [getManager],
+  );
+
   /** Unlock wallet and set derived addresses into the Zustand store */
   const unlockAndSetAddresses = useCallback(async (walletId: string, password: string) => {
     const manager = getManager();
@@ -107,6 +117,8 @@ export function useWalletManager() {
     if (btcAccount) walletStore.setBtcWallet(btcAccount.address);
     if (evmAccount) walletStore.setEvmWallet(evmAccount.address, 1);
     if (solAccount) walletStore.setSolanaWallet(solAccount.address);
+
+    useWalletStore.getState().setActiveWalletId(walletId);
   }, [getManager, walletStore]);
 
   return {
@@ -118,6 +130,7 @@ export function useWalletManager() {
     listWallets,
     deleteWallet,
     deriveAddresses,
+    derivePrivateKey,
     generateMnemonic,
     validateMnemonic,
     unlockAndSetAddresses,

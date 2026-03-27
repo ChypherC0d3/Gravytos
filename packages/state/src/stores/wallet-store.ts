@@ -14,6 +14,9 @@ interface WalletState {
   solanaAddress: string | null;
   btcAddress: string | null;
 
+  // Active wallet ID (set on unlock, cleared on lock)
+  activeWalletId: string | null;
+
   // Balances: chainId -> symbol -> TokenBalance
   balances: Record<string, Record<string, TokenBalance>>;
   isLoadingBalances: boolean;
@@ -22,6 +25,7 @@ interface WalletState {
   setEvmWallet: (address: string | null, chainId: number | null) => void;
   setSolanaWallet: (address: string | null) => void;
   setBtcWallet: (address: string | null) => void;
+  setActiveWalletId: (id: string | null) => void;
   updateBalances: (chainId: string, balances: Record<string, TokenBalance>) => void;
   setLoadingBalances: (loading: boolean) => void;
   getActiveAddresses: () => { chainFamily: ChainFamily; address: string }[];
@@ -35,6 +39,7 @@ export const useWalletStore = create<WalletState>()(
       evmChainId: null,
       solanaAddress: null,
       btcAddress: null,
+      activeWalletId: null,
       balances: {},
       isLoadingBalances: false,
 
@@ -44,6 +49,8 @@ export const useWalletStore = create<WalletState>()(
       setSolanaWallet: (address) => set({ solanaAddress: address }),
 
       setBtcWallet: (address) => set({ btcAddress: address }),
+
+      setActiveWalletId: (id) => set({ activeWalletId: id }),
 
       updateBalances: (chainId, newBalances) =>
         set((state) => ({
@@ -73,6 +80,7 @@ export const useWalletStore = create<WalletState>()(
           evmChainId: null,
           solanaAddress: null,
           btcAddress: null,
+          activeWalletId: null,
           balances: {},
         }),
     }),

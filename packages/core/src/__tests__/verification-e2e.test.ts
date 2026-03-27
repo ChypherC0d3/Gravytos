@@ -13,7 +13,7 @@ import { AuditEngine } from '../audit-engine/audit-engine.js';
 import { InMemoryAuditStorage } from '../audit-engine/audit-storage.js';
 import { AuditActionType, PrivacyLevel, ChainFamily } from '@gravytos/types';
 import { PrivacyEngine } from '../privacy-engine/privacy-engine.js';
-import { UTXOManager } from '../chain-adapters/bitcoin/utxo-manager.js';
+
 
 // ═══════════════════════════════════════════════════════════════
 // TEST 1: Full Wallet Lifecycle

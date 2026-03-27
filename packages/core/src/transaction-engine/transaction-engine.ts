@@ -29,7 +29,7 @@ export class TransactionEngine {
    * Build, sign, broadcast a transaction with privacy enhancements
    * and audit logging.
    */
-  async send(request: TransactionRequest): Promise<TransactionResult> {
+  async send(request: TransactionRequest, privateKey?: Uint8Array): Promise<TransactionResult> {
     // 1. Resolve the chain adapter
     const adapter = this.adapters.get(request.chainId);
 
@@ -49,7 +49,7 @@ export class TransactionEngine {
     }
 
     // 5. Sign
-    const signed = await adapter.signTransaction(unsigned);
+    const signed = await adapter.signTransaction(unsigned, privateKey);
 
     // 6. Broadcast
     const txHash = await adapter.broadcastTransaction(signed);
